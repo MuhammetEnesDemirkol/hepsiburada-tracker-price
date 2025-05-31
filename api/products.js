@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
     const search = req.query.search;
 
     // Dinamik WHERE koşulları
-    let where = ["status = 'aktif'"];
+    let where = [];
     let params = [];
     let paramIdx = 1;
 
@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
 
     // Ürünleri getir
     const result = await db.query(
-      `SELECT id, slug, title, link,
+      `SELECT id, slug, title, link, status,
               (SELECT price FROM prices WHERE product_id = products.id ORDER BY checked_at DESC LIMIT 1) AS current_price,
               (SELECT checked_at FROM prices WHERE product_id = products.id ORDER BY checked_at DESC LIMIT 1) AS checked_at
        FROM products

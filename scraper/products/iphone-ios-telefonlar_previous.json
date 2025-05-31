@@ -330,14 +330,14 @@
     "link": "https://www.hepsiburada.com/iphone-16-plus-256gb-deniz-mavisi-p-HBCV00006Y4HBB"
   },
   {
-    "title": "Apple iPhone 12 64 GB Mor",
-    "price": "27.174,99 TL",
-    "link": "https://www.hepsiburada.com/iphone-12-64-gb-mor-p-HBCV0000051OQV"
-  },
-  {
     "title": "Apple iPhone 12 256 GB Beyaz",
     "price": "34.499 TL",
     "link": "https://www.hepsiburada.com/iphone-12-256-gb-beyaz-p-HBV00000YDZXR"
+  },
+  {
+    "title": "Apple iPhone 12 64 GB Mor",
+    "price": "27.174,99 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-64-gb-mor-p-HBCV0000051OQV"
   },
   {
     "title": "Apple iPhone 14 128 GB Kırmızı",
@@ -460,9 +460,9 @@
     "link": "https://www.hepsiburada.com/iphone-13-128-gb-mavi-p-HBCV00000ODHHV"
   },
   {
-    "title": "Apple iPhone 15 Pro Max 1 Tb Beyaz Titanyum",
-    "price": "121.500 TL",
-    "link": "https://www.hepsiburada.com/iphone-15-pro-max-1-tb-beyaz-titanyum-p-HBCV00004XA8GH"
+    "title": "Apple iPhone 16 Pro 1 TB Beyaz",
+    "price": "129.995 TL",
+    "link": "https://www.hepsiburada.com/iphone-16-pro-1-tb-beyaz-p-HBCV00006Y4HBZ"
   },
   {
     "title": "Apple iPhone 14 Plus 512 GB Sarı",
@@ -470,19 +470,19 @@
     "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-sari-p-HBCV00003XVYI6"
   },
   {
-    "title": "Apple iPhone 15 512 GB Sarı",
-    "price": "69.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-15-512-gb-sari-p-HBCV00004X9ZCV"
-  },
-  {
     "title": "Apple iPhone XR 64 GB Coral",
     "price": "26.271 TL",
     "link": "https://www.hepsiburada.com/iphone-xr-64-gb-coral-p-HBV000014919N"
   },
   {
-    "title": "Apple iPhone 16 Pro 1 TB Beyaz",
-    "price": "129.995 TL",
-    "link": "https://www.hepsiburada.com/iphone-16-pro-1-tb-beyaz-p-HBCV00006Y4HBZ"
+    "title": "Apple iPhone 15 Pro Max 1 Tb Beyaz Titanyum",
+    "price": "121.500 TL",
+    "link": "https://www.hepsiburada.com/iphone-15-pro-max-1-tb-beyaz-titanyum-p-HBCV00004XA8GH"
+  },
+  {
+    "title": "Apple iPhone 15 512 GB Sarı",
+    "price": "69.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-15-512-gb-sari-p-HBCV00004X9ZCV"
   },
   {
     "title": "Apple iPhone 12 128 GB Mavi",
@@ -505,31 +505,6 @@
     "link": "https://www.hepsiburada.com/iphone-12-64-gb-red-special-edition-p-HBV00000YDZXG"
   },
   {
-    "title": "Apple iPhone 13 512 GB Beyaz",
-    "price": "59.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-13-512-gb-beyaz-p-HBCV00000ODHX1"
-  },
-  {
-    "title": "Apple iPhone 13 512 GB Siyah",
-    "price": "55.499 TL",
-    "link": "https://www.hepsiburada.com/iphone-13-512-gb-siyah-p-HBCV00000ODHWX"
-  },
-  {
-    "title": "Apple iPhone 14 256 GB Sarı",
-    "price": "54.444 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-256-gb-sari-p-HBCV00003XVYI8"
-  },
-  {
-    "title": "Apple iPhone 14 Plus 256 GB Kırmızı",
-    "price": "67.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-plus-256-gb-kirmizi-p-HBCV00002W280G"
-  },
-  {
-    "title": "Apple iPhone 14 Plus 512 GB Siyah",
-    "price": "64.399 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-siyah-p-HBCV00002W280J"
-  },
-  {
     "title": "Apple iPhone XR 64 GB RED Special Edition",
     "price": "28.485 TL",
     "link": "https://www.hepsiburada.com/iphone-xr-64-gb-red-special-edition-p-HBV00000FLRRR"
@@ -545,14 +520,39 @@
     "link": "https://www.hepsiburada.com/iphone-12-pro-max-256-gb-pm-HB00000YEBIE"
   },
   {
+    "title": "Apple iPhone 14 Plus 256 GB Kırmızı",
+    "price": "67.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-14-plus-256-gb-kirmizi-p-HBCV00002W280G"
+  },
+  {
+    "title": "Apple iPhone 14 Plus 512 GB Siyah",
+    "price": "64.399 TL",
+    "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-siyah-p-HBCV00002W280J"
+  },
+  {
     "title": "Apple iPhone 14 512 GB Sarı",
     "price": "55.499 TL",
     "link": "https://www.hepsiburada.com/iphone-14-512-gb-sari-p-HBCV00003XVYI9"
   },
   {
-    "title": "Apple iPhone 12 128 GB Yeşil",
-    "price": "28.615,99 TL",
-    "link": "https://www.hepsiburada.com/iphone-12-128-gb-yesil-p-HBV00000YDZXN"
+    "title": "Apple iPhone 13 512 GB Beyaz",
+    "price": "59.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-13-512-gb-beyaz-p-HBCV00000ODHX1"
+  },
+  {
+    "title": "Apple iPhone 13 mini 256 GB Beyaz",
+    "price": "68.900 TL",
+    "link": "https://www.hepsiburada.com/iphone-13-mini-256-gb-pm-HBC00001TIOHB"
+  },
+  {
+    "title": "Apple iPhone 12 Pro Max 256 GB Mavi",
+    "price": "79.500 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-pro-max-256-gb-pm-HB00000YEBIE"
+  },
+  {
+    "title": "Apple iPhone XR 64 GB RED Special Edition",
+    "price": "28.485 TL",
+    "link": "https://www.hepsiburada.com/iphone-xr-64-gb-red-special-edition-p-HBV00000FLRRR"
   },
   {
     "title": "Apple iPhone 16 Plus 512GB Beyaz",
@@ -635,6 +635,11 @@
     "link": "https://www.hepsiburada.com/iphone-16-pro-1-tb-siyah-p-HBCV00006Y4HGR"
   },
   {
+    "title": "Apple iPhone 16 Plus 128GB Pembe",
+    "price": "83.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-16-plus-128gb-pembe-p-HBCV00006Y4HUB"
+  },
+  {
     "title": "Apple Yeni iPhone SE 128 GB (3.Nesil) Siyah",
     "price": "38.999 TL",
     "link": "https://www.hepsiburada.com/yeni-iphone-se-128-gb-3-nesil-siyah-p-HBCV00001S47LA"
@@ -648,11 +653,6 @@
     "title": "Apple iPhone 15 512 GB Yeşil",
     "price": "79.999 TL",
     "link": "https://www.hepsiburada.com/iphone-15-512-gb-yesil-p-HBCV00004X9ZCX"
-  },
-  {
-    "title": "Apple iPhone 16 Plus 128GB Pembe",
-    "price": "83.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-16-plus-128gb-pembe-p-HBCV00006Y4HUB"
   },
   {
     "title": "Apple iPhone 14 Pro Max 128 GB Gümüş",
@@ -695,6 +695,16 @@
     "link": "https://www.hepsiburada.com/iphone-11-128-gb-siyah-p-HBV0000120X5Z"
   },
   {
+    "title": "Apple iPhone SE 64 GB Kırmızı",
+    "price": "30.900 TL",
+    "link": "https://www.hepsiburada.com/iphone-se-64-gb-kirmizi-p-HBV0000122JDJ"
+  },
+  {
+    "title": "Apple iPhone 12 256 GB Yeşil",
+    "price": "35.989 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-256-gb-yesil-p-HBV00000YEBHF"
+  },
+  {
     "title": "Apple iPhone 14 Pro 256 GB Altın",
     "price": "87.999 TL",
     "link": "https://www.hepsiburada.com/apple-iphone-14-pro-256-gb-pm-HBC00002W48M6"
@@ -710,24 +720,14 @@
     "link": "https://www.hepsiburada.com/iphone-14-plus-128-gb-siyah-p-HBCV00002W2807"
   },
   {
-    "title": "Apple iPhone 14 Pro Max 256 GB Altın",
-    "price": "100.649,99 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-pro-max-256-gb-altin-p-HBCV00002W46NK"
+    "title": "Apple iPhone 12 256 GB Yeşil",
+    "price": "35.989 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-256-gb-yesil-p-HBV00000YEBHF"
   },
   {
-    "title": "Apple iPhone 11 64 GB Yeşil",
-    "price": "28.309,49 TL",
-    "link": "https://www.hepsiburada.com/iphone-11-64-gb-yesil-p-HBV0000120X69"
-  },
-  {
-    "title": "Apple iPhone 11 64 GB RED Special Edition",
-    "price": "27.699,94 TL",
-    "link": "https://www.hepsiburada.com/iphone-11-64-gb-red-special-edition-p-HBV0000120X67"
-  },
-  {
-    "title": "Apple iPhone 11 64 GB Yeşil",
-    "price": "28.309,49 TL",
-    "link": "https://www.hepsiburada.com/iphone-11-64-gb-yesil-p-HBV0000120X69"
+    "title": "Apple iPhone 14 Pro 256 GB Altın",
+    "price": "87.999 TL",
+    "link": "https://www.hepsiburada.com/apple-iphone-14-pro-256-gb-pm-HBC00002W48M6"
   },
   {
     "title": "Apple iPhone SE 64 GB Kırmızı",
@@ -740,29 +740,9 @@
     "link": "https://www.hepsiburada.com/iphone-11-128-gb-sari-p-HBV0000122JCQ"
   },
   {
-    "title": "Apple iPhone 14 Pro Max 128 GB Altın",
-    "price": "95.559 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-pro-max-128-gb-altin-p-HBCV00002W48ME"
-  },
-  {
-    "title": "Apple iPhone 15 Pro Max 256 GB Natürel Titanyum",
-    "price": "104.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-15-pro-max-256-gb-naturel-titanyum-p-HBCV00004XA8G8"
-  },
-  {
-    "title": "Apple iPhone 15 Pro Max Beyaz 256 GB 8 GB Ram Akıllı Telefon (Apple Türkiye Garantili)",
-    "price": "108.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-15-pro-max-beyaz-256-gb-8-gb-ram-akilli-telefon-apple-turkiye-garantili-p-HBCV00004XA8G7"
-  },
-  {
-    "title": "Apple iPhone 12 64 GB Yeşil",
-    "price": "29.899 TL",
-    "link": "https://www.hepsiburada.com/iphone-12-64-gb-yesil-p-HBV00000YDZXH"
-  },
-  {
-    "title": "Apple iPhone 11 128 GB Beyaz",
-    "price": "30.000 TL",
-    "link": "https://www.hepsiburada.com/iphone-11-128-gb-beyaz-p-HBV0000122JCR"
+    "title": "Apple iPhone 14 Plus 512 GB Kırmızı",
+    "price": "64.999,01 TL",
+    "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-kirmizi-p-HBCV00002W280M"
   },
   {
     "title": "Apple iPhone 14 Plus 128 GB Mavi",
@@ -775,9 +755,34 @@
     "link": "https://www.hepsiburada.com/iphone-14-plus-256-gb-sari-p-HBCV00003XVYI5"
   },
   {
-    "title": "Apple iPhone 14 Plus 512 GB Kırmızı",
-    "price": "64.999,01 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-kirmizi-p-HBCV00002W280M"
+    "title": "Apple iPhone 15 Pro Max 256 GB Natürel Titanyum",
+    "price": "104.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-15-pro-max-256-gb-naturel-titanyum-p-HBCV00004XA8G8"
+  },
+  {
+    "title": "Apple iPhone 15 Pro Max Beyaz 256 GB 8 GB Ram Akıllı Telefon (Apple Türkiye Garantili)",
+    "price": "108.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-15-pro-max-beyaz-256-gb-8-gb-ram-akilli-telefon-apple-turkiye-garantili-p-HBCV00004XA8G7"
+  },
+  {
+    "title": "Apple iPhone 14 Pro Max 128 GB Altın",
+    "price": "95.559 TL",
+    "link": "https://www.hepsiburada.com/iphone-14-pro-max-128-gb-altin-p-HBCV00002W48ME"
+  },
+  {
+    "title": "Apple iPhone 12 64 GB Yeşil",
+    "price": "29.899 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-64-gb-yesil-p-HBV00000YDZXH"
+  },
+  {
+    "title": "Apple iPhone 11 128 GB Beyaz",
+    "price": "30.000 TL",
+    "link": "https://www.hepsiburada.com/iphone-11-128-gb-beyaz-p-HBV0000122JCR"
+  },
+  {
+    "title": "Apple iPhone 12 Mini 64 GB Mavi",
+    "price": "59.900 TL",
+    "link": "https://www.hepsiburada.com/iphone-12-mini-64-gb-pm-HB00000YE9YI"
   },
   {
     "title": "Apple iPhone 12 Pro Max 128 GB Altın",
@@ -785,19 +790,29 @@
     "link": "https://www.hepsiburada.com/iphone-12-pro-max-128-gb-pm-HB00000YEBIC"
   },
   {
-    "title": "Apple iPhone 13 Pro Max 1 Tb Mavi",
-    "price": "84.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-13-pro-max-1-tb-mavi-p-HBCV00000OM9OW"
-  },
-  {
     "title": "Apple iPhone 15 Pro 1 TB siyah titanyum",
     "price": "99.999 TL",
     "link": "https://www.hepsiburada.com/iphone-15-pro-1-tb-siyah-titanyum-pm-HBC00004XA87G"
   },
   {
-    "title": "Apple iPhone 12 Mini 64 GB Mavi",
-    "price": "59.900 TL",
-    "link": "https://www.hepsiburada.com/iphone-12-mini-64-gb-pm-HB00000YE9YI"
+    "title": "Apple iPhone 13 Pro Max 1 Tb Mavi",
+    "price": "84.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-13-pro-max-1-tb-mavi-p-HBCV00000OM9OW"
+  },
+  {
+    "title": "Apple iPhone 16 Plus 512GB Lacivert Taş",
+    "price": "85.433 TL",
+    "link": "https://www.hepsiburada.com/iphone-16-plus-512gb-lacivert-tas-p-HBCV00006Y4HGJ"
+  },
+  {
+    "title": "Apple Yeni iPhone SE 64 GB (3.Nesil) Kırmızı",
+    "price": "37.999 TL",
+    "link": "https://www.hepsiburada.com/yeni-iphone-se-64-gb-3-nesil-kirmizi-p-HBCV00001S45XO"
+  },
+  {
+    "title": "Apple iPhone 15 Plus 512 GB Pembe",
+    "price": "81.399 TL",
+    "link": "https://www.hepsiburada.com/iphone-15-plus-512-gb-pembe-p-HBCV00004XA392"
   },
   {
     "title": "Apple iPhone 14 Plus 256 GB Beyaz",
@@ -820,21 +835,6 @@
     "link": "https://www.hepsiburada.com/iphone-14-plus-512-gb-mor-p-HBCV00002W280L"
   },
   {
-    "title": "Apple Yeni iPhone SE 64 GB (3.Nesil) Kırmızı",
-    "price": "37.999 TL",
-    "link": "https://www.hepsiburada.com/yeni-iphone-se-64-gb-3-nesil-kirmizi-p-HBCV00001S45XO"
-  },
-  {
-    "title": "Apple iPhone 16 Plus 512GB Lacivert Taş",
-    "price": "85.433 TL",
-    "link": "https://www.hepsiburada.com/iphone-16-plus-512gb-lacivert-tas-p-HBCV00006Y4HGJ"
-  },
-  {
-    "title": "Apple iPhone 15 Plus 512 GB Pembe",
-    "price": "81.399 TL",
-    "link": "https://www.hepsiburada.com/iphone-15-plus-512-gb-pembe-p-HBCV00004XA392"
-  },
-  {
     "title": "Apple iPhone 11 64 GB Mor",
     "price": "28.630,38 TL",
     "link": "https://www.hepsiburada.com/iphone-11-64-gb-mor-p-HBV0000122JCS"
@@ -855,14 +855,14 @@
     "link": "https://www.hepsiburada.com/iphone-15-pro-max-1-tb-mavi-titanyum-p-HBCV00004XA8GJ"
   },
   {
-    "title": "Apple iPhone 16 512GB Beyaz",
-    "price": "84.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-16-512gb-beyaz-p-HBCV00006Y4HU7"
-  },
-  {
     "title": "Apple iPhone 13 Pro 256 GB Mavi",
     "price": "119.999 TL",
     "link": "https://www.hepsiburada.com/iphone-13-pro-256-gb-pm-HBC00001TIYJX"
+  },
+  {
+    "title": "Apple iPhone 16 512GB Beyaz",
+    "price": "84.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-16-512gb-beyaz-p-HBCV00006Y4HU7"
   },
   {
     "title": "Apple iPhone 14 512 GB Mor",
@@ -875,9 +875,19 @@
     "link": "https://www.hepsiburada.com/iphone-14-512-gb-kirmizi-p-HBCV00002VUQ84"
   },
   {
+    "title": "Apple iPhone 16 512GB Lacivert Taş",
+    "price": "88.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-16-512gb-lacivert-tas-p-HBCV00006Y4HG1"
+  },
+  {
     "title": "Apple iPhone 11 256 GB Mor",
     "price": "42.089,99 TL",
     "link": "https://www.hepsiburada.com/iphone-11-256-gb-pm-HB00000NSB6C"
+  },
+  {
+    "title": "Apple iPhone 14 Pro Max 128 GB Mor",
+    "price": "104.999 TL",
+    "link": "https://www.hepsiburada.com/iphone-14-pro-max-128-gb-mor-p-HBCV00002W46NH"
   },
   {
     "title": "Apple iPhone 14 Plus 256 GB Siyah",
@@ -888,16 +898,6 @@
     "title": "Apple iPhone 14 512 GB Beyaz",
     "price": "69.999 TL",
     "link": "https://www.hepsiburada.com/iphone-14-512-gb-beyaz-p-HBCV00002VUQ82"
-  },
-  {
-    "title": "Apple iPhone 14 Pro Max 128 GB Mor",
-    "price": "104.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-14-pro-max-128-gb-mor-p-HBCV00002W46NH"
-  },
-  {
-    "title": "Apple iPhone 16 512GB Lacivert Taş",
-    "price": "88.999 TL",
-    "link": "https://www.hepsiburada.com/iphone-16-512gb-lacivert-tas-p-HBCV00006Y4HG1"
   },
   {
     "title": "Apple iPhone 14 512 GB Beyaz",

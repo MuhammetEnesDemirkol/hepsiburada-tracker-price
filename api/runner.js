@@ -43,7 +43,7 @@ async function main() {
 }
 
 // ⏱️ Her saat başı tetiklenir
-cron.schedule('16 * * * *', () => {
+cron.schedule('37 * * * *', () => {
     console.log('⏱️ Otomatik tarama zamanı geldi:', new Date().toLocaleString());
     main();
 });
