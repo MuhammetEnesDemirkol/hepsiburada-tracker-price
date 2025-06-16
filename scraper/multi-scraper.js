@@ -4,6 +4,8 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 const db = require('./db');
 const axios = require('axios');
+const { exec } = require('child_process');
+const { formatMessage } = require('../api/notify');
 
 const productsPerPage = 36;
 const outputDir = path.join(__dirname, 'products');
@@ -152,14 +154,14 @@ async function scrapeCategory(category, browser) {
       await loadPage(baseURL);
 
       // Sayfanın yüklenmesini bekle
-      await page.waitForSelector('div[class^="totalProductCount-"] span', { timeout: PAGE_TIMEOUT });
+      await page.waitForSelector('div[class^="VZbTh5SU1OsNkwSvy5FF"]', { timeout: PAGE_TIMEOUT });
 
       // Toplam ürün sayısını al
       const totalText = await page.$eval(
-        'div[class^="totalProductCount-"] span',
+        'div[class^="VZbTh5SU1OsNkwSvy5FF"]',
         (el) => el.textContent.trim()
       );
-      const totalProducts = parseInt(totalText) || 0;
+      const totalProducts = parseInt(totalText.match(/\d+/)[0]) || 0;
       const totalPages = Math.ceil(totalProducts / productsPerPage);
 
       console.log(`\n📊 ${category.title} kategorisi bilgileri:`);
@@ -179,19 +181,46 @@ async function scrapeCategory(category, browser) {
           const title = titleEl?.innerText.trim();
           const price = priceEl?.innerText.trim();
           const link = linkEl?.getAttribute('href');
-
+          let image = null;
+          // Öncelik sırası: özel class'lı img, kart içindeki ilk img, ilk source srcset
+          const imageEl = el.querySelector('img.hbImageView-module_hbImage__Ca3xO') || el.querySelector('img');
+          if (imageEl && imageEl.getAttribute('src')) {
+            image = imageEl.getAttribute('src');
+          } else {
+            const sourceEl = el.querySelector('source') || el.querySelector('source.hbImageView-module_hbImage__Ca3xO');
+            if (sourceEl && sourceEl.getAttribute('srcset')) {
+              image = sourceEl.getAttribute('srcset').split(',')[0].split(' ')[0];
+            } else {
+              // Fallback: data-src veya style background-image
+              const dataSrc = el.querySelector('[data-src]');
+              if (dataSrc) {
+                image = dataSrc.getAttribute('data-src');
+              } else if (el.style && el.style.backgroundImage) {
+                const bg = el.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+                if (bg && bg[1]) image = bg[1];
+              }
+            }
+          }
           if (title && price && link) {
             items.push({
               title,
               price,
-              link: 'https://www.hepsiburada.com' + link
+              link: 'https://www.hepsiburada.com' + link,
+              image
             });
           }
         });
         return items;
       });
+      // Node.js tarafında image null olanları logla
+      firstPageProducts.forEach(p => { if (!p.image) console.log('[NODE GÖRSEL LOG] Görsel yok:', p.title, p.link); });
       // Linkleri temizle
-      firstPageProducts = firstPageProducts.map(p => ({ ...p, link: cleanProductLink(p.link) }));
+      firstPageProducts = firstPageProducts.map(p => {
+        const link = cleanProductLink(p.link);
+        // HB ile başlayan kodu linkten çek
+        const codeMatch = link.match(/(HB[A-Z0-9]+)/);
+        return { ...p, link, product_code: codeMatch ? codeMatch[1] : null };
+      });
 
       allProducts.push(...firstPageProducts);
       console.log(`✅ Sayfa 1: ${firstPageProducts.length} ürün tarandı`);
@@ -223,19 +252,46 @@ async function scrapeCategory(category, browser) {
             const title = titleEl?.innerText.trim();
             const price = priceEl?.innerText.trim();
             const link = linkEl?.getAttribute('href');
-
+            let image = null;
+            // Öncelik sırası: özel class'lı img, kart içindeki ilk img, ilk source srcset
+            const imageEl = el.querySelector('img.hbImageView-module_hbImage__Ca3xO') || el.querySelector('img');
+            if (imageEl && imageEl.getAttribute('src')) {
+              image = imageEl.getAttribute('src');
+            } else {
+              const sourceEl = el.querySelector('source') || el.querySelector('source.hbImageView-module_hbImage__Ca3xO');
+              if (sourceEl && sourceEl.getAttribute('srcset')) {
+                image = sourceEl.getAttribute('srcset').split(',')[0].split(' ')[0];
+              } else {
+                // Fallback: data-src veya style background-image
+                const dataSrc = el.querySelector('[data-src]');
+                if (dataSrc) {
+                  image = dataSrc.getAttribute('data-src');
+                } else if (el.style && el.style.backgroundImage) {
+                  const bg = el.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+                  if (bg && bg[1]) image = bg[1];
+                }
+              }
+            }
             if (title && price && link) {
               items.push({
                 title,
                 price,
-                link: 'https://www.hepsiburada.com' + link
+                link: 'https://www.hepsiburada.com' + link,
+                image
               });
             }
           });
           return items;
         });
+        // Node.js tarafında image null olanları logla
+        pageProducts.forEach(p => { if (!p.image) console.log('[NODE GÖRSEL LOG] Görsel yok:', p.title, p.link); });
         // Linkleri temizle
-        pageProducts = pageProducts.map(p => ({ ...p, link: cleanProductLink(p.link) }));
+        pageProducts = pageProducts.map(p => {
+          const link = cleanProductLink(p.link);
+          // HB ile başlayan kodu linkten çek
+          const codeMatch = link.match(/(HB[A-Z0-9]+)/);
+          return { ...p, link, product_code: codeMatch ? codeMatch[1] : null };
+        });
 
         allProducts.push(...pageProducts);
         console.log(`✅ Sayfa ${pageNum}: ${pageProducts.length} ürün tarandı`);
@@ -270,12 +326,12 @@ async function scrapeCategory(category, browser) {
         }
       }
 
-      // Önceki ürünleri map'e çevir
-      const previousMap = new Map(previousProducts.map(p => [p.link, p]));
+      // Önceki ürünleri map'e çevir (link yerine ürün kodu ile)
+      const previousMap = new Map(previousProducts.map(p => [p.product_code, p]));
 
       // Değişiklikleri kontrol et
       for (const newProduct of cleanedProducts) {
-        const oldProduct = previousMap.get(newProduct.link);
+        const oldProduct = previousMap.get(newProduct.product_code);
         if (!oldProduct) {
           newProducts++;
           newProductList.push(newProduct);
@@ -317,33 +373,33 @@ async function scrapeCategory(category, browser) {
           // Fiyat değişikliği olan ürünler için bildirim
           if (priceChanges > 0) {
             for (const change of changedProducts) {
-              const message = `💰 <b>${category.title}</b> kategorisinde fiyat düşüşü:\n\n` +
-                            `🛍️ Ürün: ${change.new.title}\n` +
-                            `📉 Eski fiyat: ${change.old.price}\n` +
-                            `📈 Yeni fiyat: ${change.new.price}\n` +
-                            `📊 Düşüş oranı: %${change.changePercentage}\n` +
-                            `⚡ Eşik değeri: %${category.discount_threshold}\n\n` +
-                            `🔗 <a href="${change.new.link}">Ürünü Görüntüle</a>`;
-              
-              // Veritabanına kaydet
-              await saveLog(slug, message, 'price_change');
-              // Telegram'a gönder
-              await sendTelegramMessage(message);
+              const formatted = formatMessage({
+                type: 'price-change',
+                title: change.new.title,
+                oldPrice: change.old.price,
+                newPrice: change.new.price,
+                link: change.new.link,
+                productCode: change.new.product_code,
+                imageUrl: change.new.image,
+              });
+              await saveLog(slug, formatted, 'price_change');
+              await sendTelegramMessage(formatted);
             }
           }
 
           // Yeni ürünler için bildirim
           if (newProducts > 0) {
             for (const product of newProductList) {
-              const message = `🆕 <b>${category.title}</b> kategorisinde yeni ürün:\n\n` +
-                            `🛍️ Ürün: ${product.title}\n` +
-                            `💰 Fiyat: ${product.price}\n\n` +
-                            `🔗 <a href="${product.link}">Ürünü Görüntüle</a>`;
-              
-              // Veritabanına kaydet
-              await saveLog(slug, message, 'new_product');
-              // Telegram'a gönder
-              await sendTelegramMessage(message);
+              const formatted = formatMessage({
+                type: 'new',
+                title: product.title,
+                price: product.price,
+                link: product.link,
+                productCode: product.product_code,
+                imageUrl: product.image,
+              });
+              await saveLog(slug, formatted, 'new_product');
+              await sendTelegramMessage(formatted);
             }
           }
           console.log('✅ Bildirimler gönderildi');
@@ -390,63 +446,47 @@ async function scrapeAll() {
   let successCount = 0;
   let failCount = 0;
   let totalProducts = 0;
-  let currentIndex = 0;
 
-  // İlk iki kategori için browser'ları başlat
-  const browsers = await Promise.all([
-    puppeteer.launch({ 
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }),
-    puppeteer.launch({ 
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    })
-  ]);
-
-  // Her browser için ayrı bir işlem başlat
-  const processes = browsers.map(async (browser, browserIndex) => {
-    while (currentIndex < categories.length) {
-      // Global timeout kontrolü
-      if (Date.now() - startTime > GLOBAL_TIMEOUT) {
-        const message = `\n🛑 Global timeout (${GLOBAL_TIMEOUT/1000} saniye) aşıldı. İşlem durduruluyor.`;
-        console.error(message);
-        break;
-      }
-
-      // Kategori indeksini al ve artır
-      const categoryIndex = currentIndex++;
-      if (categoryIndex >= categories.length) break;
-
-      const category = categories[categoryIndex];
-      console.log(`\n🔄 Browser ${browserIndex + 1} - ${category.title} kategorisine geçiliyor...`);
-
-      const success = await scrapeCategory(category, browser);
-      if (success) {
-        successCount++;
-        const outputPath = path.join(outputDir, `${category.slug}.json`);
-        if (fs.existsSync(outputPath)) {
-          const products = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-          totalProducts += products.length;
-        }
-      } else {
-        failCount++;
-      }
-
-      // Kategoriler arası rastgele bekleme
-      if (currentIndex < categories.length) {
-        const delay = Math.floor(Math.random() * 3000) + 2000; // 2-5 saniye
-        console.log(`\n⏳ Browser ${browserIndex + 1} - Sonraki kategori için ${delay/1000} saniye bekleniyor...\n`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
+  // Tek browser başlat
+  const browser = await puppeteer.launch({ 
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
-  // Tüm işlemlerin bitmesini bekle
-  await Promise.all(processes);
+  // Kategorileri sırayla tara
+  for (let i = 0; i < categories.length; i++) {
+    // Global timeout kontrolü
+    if (Date.now() - startTime > GLOBAL_TIMEOUT) {
+      const message = `\n🛑 Global timeout (${GLOBAL_TIMEOUT/1000} saniye) aşıldı. İşlem durduruluyor.`;
+      console.error(message);
+      break;
+    }
 
-  // Browser'ları kapat
-  await Promise.all(browsers.map(browser => browser.close()));
+    const category = categories[i];
+    console.log(`\n🔄 ${category.title} kategorisine geçiliyor...`);
+
+    const success = await scrapeCategory(category, browser);
+    if (success) {
+      successCount++;
+      const outputPath = path.join(outputDir, `${category.slug}.json`);
+      if (fs.existsSync(outputPath)) {
+        const products = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
+        totalProducts += products.length;
+      }
+    } else {
+      failCount++;
+    }
+
+    // Kategoriler arası rastgele bekleme
+    if (i < categories.length - 1) {
+      const delay = Math.floor(Math.random() * 3000) + 2000; // 2-5 saniye
+      console.log(`\n⏳ Sonraki kategori için ${delay/1000} saniye bekleniyor...\n`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  // Browser'ı kapat
+  await browser.close();
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
   
@@ -458,6 +498,16 @@ async function scrapeAll() {
   console.log(`📦 Toplam taranan ürün: ${totalProducts}`);
   console.log(`⏱️ Toplam süre: ${duration} saniye`);
   console.log('\n' + '='.repeat(50) + '\n');
+
+  // Scraping işlemi bittikten sonra veritabanına kayıt işlemini başlat
+  exec('node scraper/save-to-db.js', (err, stdout, stderr) => {
+    if (err) {
+      console.error('Veritabanı kaydı başlatılamadı:', err);
+      return;
+    }
+    console.log(stdout);
+    if (stderr) console.error(stderr);
+  });
 }
 
 // 🔄 Sürekli tarama fonksiyonu

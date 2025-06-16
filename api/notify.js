@@ -9,7 +9,8 @@ const failedNotificationsPath = path.join(__dirname, '../scraper/failed-notifica
 // Buffer için değişiklik kuyruğu
 let notificationBuffer = [];
 const BUFFER_SIZE = 10;
-const RATE_LIMIT_DELAY = 2000; // 2 saniye
+const RATE_LIMIT_DELAY = 5000; // 5 saniye
+const MAX_RETRIES = 3;
 
 // Log dosyası
 const logFile = path.join(__dirname, '../logs/notifications.log');
@@ -48,7 +49,12 @@ function log(message) {
 
 function formatMessage(change) {
     if (change.type === 'new') {
-        return `🆕 Yeni Ürün:\n${change.title}\n💰 ${change.price}\n🔗 ${change.link}`;
+        return `🆕 Yeni Ürün:
+📦 Ürün Kodu: ${change.productCode || '-'}
+📝 ${change.title}
+💰 ${change.price}
+🖼️ Görsel: ${change.imageUrl || '-'}
+🔗 ${change.link}`;
     } else if (change.type === 'price-change') {
         // Fiyatları sayısal değerlere çevir
         const oldPrice = parseFloat(change.oldPrice.replace(/[^\d,]/g, '').replace(',', '.'));
@@ -57,36 +63,53 @@ function formatMessage(change) {
         // Sadece fiyat düşüşlerini bildir
         if (newPrice < oldPrice) {
             const discount = ((oldPrice - newPrice) / oldPrice * 100).toFixed(1);
-            return `💸 Fiyat Düştü!\n${change.title}\n🔻 ${change.oldPrice} ➡ ${change.newPrice}\n📉 %${discount} indirim\n🔗 ${change.link}`;
+            return `💸 Fiyat Düştü!
+📦 Ürün Kodu: ${change.productCode || '-'}
+📝 ${change.title}
+🔻 ${change.oldPrice} ➡ ${change.newPrice}
+📉 %${discount} indirim
+🖼️ Görsel: ${change.imageUrl || '-'}
+🔗 ${change.link}`;
         }
         return ''; // Fiyat artışlarında boş mesaj döndür
     }
     return '';
 }
 
-async function sendTelegramMessage(text) {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
+async function sendTelegramMessage(message, imageUrl = null) {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    if (!token || !chatId) {
-        log('❌ Telegram yapılandırması eksik.');
+    if (!botToken || !chatId) {
+        log('❌ Telegram bot token veya chat ID bulunamadı!');
         return false;
     }
 
-    const url = `https://api.telegram.org/bot${token}/sendMessage`;
-
-    try {
-        await axios.post(url, {
-            chat_id: chatId,
-            text,
-            parse_mode: 'HTML'
-        });
-        log('📬 Telegram bildirimi gönderildi.');
-        return true;
-    } catch (error) {
-        log(`❌ Telegram gönderim hatası: ${error.message}`);
-        return false;
+    let retryCount = 0;
+    while (retryCount < MAX_RETRIES) {
+        try {
+            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            await axios.post(url, {
+                chat_id: chatId,
+                text: message,
+                parse_mode: 'HTML'
+            });
+            return true;
+        } catch (error) {
+            if (error.response && error.response.status === 429) {
+                const retryAfter = error.response.data.parameters.retry_after || 5;
+                log(`⚠️ Rate limit aşıldı. ${retryAfter} saniye bekleniyor...`);
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                retryCount++;
+            } else {
+                log(`❌ Telegram mesajı gönderilemedi: ${error.message}`);
+                return false;
+            }
+        }
     }
+    
+    log(`❌ Maksimum deneme sayısına ulaşıldı. Mesaj gönderilemedi.`);
+    return false;
 }
 
 // Başarısız bildirimleri kaydet
@@ -225,5 +248,6 @@ if (require.main === module) {
 module.exports = {
     sendInstantNotification,
     notifyChanges,
-    sendTelegramMessage
+    sendTelegramMessage,
+    formatMessage
 };

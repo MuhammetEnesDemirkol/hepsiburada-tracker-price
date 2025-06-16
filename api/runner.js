@@ -1,3 +1,5 @@
+// runner.js veya app.js
+process.env.TZ = 'Europe/Istanbul';
 const path = require('path');
 const cron = require('node-cron');
 const { spawn } = require('child_process');
@@ -42,10 +44,6 @@ async function main() {
     }
 }
 
-// ⏱️ Her saat başı tetiklenir
-cron.schedule('59 * * * *', () => {
-    console.log('⏱️ Otomatik tarama zamanı geldi:', new Date().toLocaleString());
-    main();
-});
+main();
 
 console.log('🚀 Cron servisi aktif. Saat başı çalışacak...');
