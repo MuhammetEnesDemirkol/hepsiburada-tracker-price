@@ -2,6 +2,8 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const notificationService = require('../services/notification');
+const logger = require('../services/logger');
 
 const changesPath = path.join(__dirname, '../scraper/changes.json');
 const failedNotificationsPath = path.join(__dirname, '../scraper/failed-notifications.json');
@@ -88,12 +90,12 @@ async function sendTelegramMessage(message, imageUrl = null) {
     let retryCount = 0;
     while (retryCount < MAX_RETRIES) {
         try {
-            const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-            await axios.post(url, {
-                chat_id: chatId,
-                text: message,
-                parse_mode: 'HTML'
-            });
+    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+    await axios.post(url, {
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML'
+    });
             return true;
         } catch (error) {
             if (error.response && error.response.status === 429) {
@@ -128,50 +130,12 @@ function saveFailedNotification(change) {
 
 // Buffer'daki bildirimleri gönder
 async function sendBufferedNotifications() {
-    if (notificationBuffer.length === 0) return;
-
-    log(`📦 Buffer'daki ${notificationBuffer.length} bildirim gönderiliyor...`);
-    
-    for (const change of notificationBuffer) {
-        const message = formatMessage(change);
-        const sent = await sendTelegramMessage(message);
-        
-        if (sent) {
-            change.sent = true;
-            log(`✅ Bildirim başarıyla gönderildi: ${change.title}`);
-        } else {
-            saveFailedNotification(change);
-            log(`❌ Bildirim gönderilemedi: ${change.title}`);
-        }
-
-        // Rate limiting için bekle
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-    }
-
-    // Buffer'ı temizle
-    notificationBuffer = [];
+    await notificationService.sendBufferedNotifications();
 }
 
-// Anlık bildirim gönderme fonksiyonu
+// Anlık bildirim gönder
 async function sendInstantNotification(change) {
-    // Fiyat değişikliği ise ve fiyat düşmüşse bildir
-    if (change.type === 'price-change') {
-        const oldPrice = parseFloat(change.oldPrice.replace(/[^\d,]/g, '').replace(',', '.'));
-        const newPrice = parseFloat(change.newPrice.replace(/[^\d,]/g, '').replace(',', '.'));
-        
-        if (newPrice >= oldPrice) {
-            log(`ℹ️ Fiyat artışı bildirilmedi: ${change.title}`);
-            return;
-        }
-    }
-
-    notificationBuffer.push(change);
-    log(`📝 Yeni değişiklik buffer'a eklendi: ${change.title}`);
-
-    // Buffer dolduğunda gönder
-    if (notificationBuffer.length >= BUFFER_SIZE) {
-        await sendBufferedNotifications();
-    }
+    return await notificationService.sendInstantNotification(change);
 }
 
 // Başarısız bildirimleri tekrar dene
@@ -206,38 +170,14 @@ async function retryFailedNotifications() {
     fs.writeFileSync(failedNotificationsPath, JSON.stringify(remainingNotifications, null, 2));
 }
 
-// Toplu bildirim gönderme fonksiyonu
+// Değişiklikleri bildir
 async function notifyChanges() {
-    if (!fs.existsSync(changesPath)) {
-        log('ℹ️ changes.json bulunamadı, bildirim gönderilmeyecek.');
-        return;
+    try {
+        await sendBufferedNotifications();
+        logger.success('Tüm bildirimler gönderildi');
+    } catch (error) {
+        logger.error(`Bildirim gönderme hatası: ${error.message}`);
     }
-
-    const changes = JSON.parse(fs.readFileSync(changesPath, 'utf-8'));
-
-    if (changes.length === 0) {
-        log('ℹ️ Gönderilecek değişiklik yok.');
-        return;
-    }
-
-    // Gönderilmemiş değişiklikleri filtrele
-    const unsentChanges = changes.filter(change => !change.sent);
-    log(`ℹ️ ${unsentChanges.length} gönderilmemiş değişiklik bulundu.`);
-    
-    // Buffer'ı doldur
-    for (const change of unsentChanges) {
-        await sendInstantNotification(change);
-    }
-
-    // Kalan bildirimleri gönder
-    await sendBufferedNotifications();
-
-    // Başarısız bildirimleri tekrar dene
-    await retryFailedNotifications();
-
-    // Değişiklikleri kaydet
-    const remaining = changes.filter(change => !change.sent);
-    fs.writeFileSync(changesPath, JSON.stringify(remaining, null, 2));
 }
 
 // Eğer doğrudan çalıştırılırsa

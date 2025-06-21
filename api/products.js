@@ -39,15 +39,15 @@ router.get('/', async (req, res) => {
     // Sıralama
     let orderBy = 'ORDER BY id DESC';
     if (sort) {
-      orderBy = `ORDER BY (SELECT price FROM prices WHERE product_id = products.id ORDER BY checked_at DESC LIMIT 1)::float ${sort}`;
+      orderBy = `ORDER BY (SELECT price FROM price_history WHERE product_id = products.id ORDER BY created_at DESC LIMIT 1)::float ${sort}`;
     }
 
     // Ürünleri getir
     const result = await db.query(
       `SELECT id, slug, title, link, status,
-              (SELECT price FROM prices WHERE product_id = products.id ORDER BY checked_at DESC LIMIT 1) AS current_price,
-              (SELECT MIN(price::float) FROM prices WHERE product_id = products.id) AS lowest_price,
-              (SELECT checked_at FROM prices WHERE product_id = products.id ORDER BY checked_at DESC LIMIT 1) AS checked_at
+              (SELECT price FROM price_history WHERE product_id = products.id ORDER BY created_at DESC LIMIT 1) AS current_price,
+              (SELECT MIN(price::float) FROM price_history WHERE product_id = products.id) AS lowest_price,
+              (SELECT created_at FROM price_history WHERE product_id = products.id ORDER BY created_at DESC LIMIT 1) AS checked_at
        FROM products
        ${whereClause}
        ${orderBy}
@@ -74,8 +74,9 @@ router.get('/', async (req, res) => {
 router.get('/:id/history', async (req, res) => {
   const { id } = req.params;
   try {
+    // Fiyat geçmişini getir
     const result = await db.query(
-      'SELECT price, checked_at FROM prices WHERE product_id = $1 ORDER BY checked_at ASC',
+      'SELECT price, created_at as checked_at FROM price_history WHERE product_id = $1 ORDER BY created_at ASC',
       [id]
     );
     res.json(result.rows);

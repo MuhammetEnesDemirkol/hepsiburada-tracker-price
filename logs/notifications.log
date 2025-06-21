@@ -13641,3 +13641,31 @@
 [2025-06-03T11:09:13.158Z] ❌ Telegram gönderim hatası: Request failed with status code 429
 [2025-06-03T11:09:13.159Z] ❌ Telegram gönderim hatası: Request failed with status code 429
 [2025-06-03T11:09:14.330Z] ℹ️ Gönderilecek değişiklik yok.
+[2025-06-21T03:15:21.033Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.086Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.248Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.303Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.342Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.469Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.482Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.492Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.505Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.538Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.546Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.657Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.798Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.808Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.813Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.821Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.843Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.910Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.914Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.918Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.922Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.927Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.931Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.935Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.940Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.943Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:21.968Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org
+[2025-06-21T03:15:22.004Z] ❌ Telegram mesajı gönderilemedi: getaddrinfo ENOTFOUND api.telegram.org

@@ -3,6 +3,11 @@ process.env.TZ = 'Europe/Istanbul';
 const path = require('path');
 const cron = require('node-cron');
 const { spawn } = require('child_process');
+const { scrapeCategory } = require('../scraper/scraper');
+const { saveToDatabase } = require('../scraper/save-to-db');
+const { compareProducts } = require('./compare');
+const databaseService = require('../services/database');
+const logger = require('../services/logger');
 
 // Komutları sırayla çalıştır
 function runScript(command, label) {
@@ -44,6 +49,74 @@ async function main() {
     }
 }
 
-main();
+async function runScraper() {
+    try {
+        logger.info('Tarama başlatılıyor...');
+
+        // Aktif kategorileri al
+        const categories = await databaseService.getActiveCategories();
+        
+        if (categories.length === 0) {
+            logger.warn('Aktif kategori bulunamadı!');
+            return;
+        }
+
+        logger.info(`${categories.length} aktif kategori bulundu.`);
+
+        // Her kategori için tarama yap
+        for (const category of categories) {
+            try {
+                logger.info(`${category.title} kategorisi taranıyor...`);
+
+                // Kategoriyi tara
+                const products = await scrapeCategory(category.slug);
+                
+                if (products.length === 0) {
+                    logger.warn(`${category.title} kategorisinde ürün bulunamadı!`);
+                    continue;
+                }
+
+                logger.info(`${category.title} kategorisinde ${products.length} ürün bulundu.`);
+
+                // Ürünleri veritabanına kaydet
+                await saveToDatabase(products, category.slug);
+
+                // Fiyat karşılaştırması yap
+                await compareProducts();
+
+            } catch (error) {
+                logger.error(`${category.title} kategorisi işlenirken hata: ${error.message}`);
+            }
+        }
+
+        logger.info('Tarama tamamlandı.');
+
+    } catch (error) {
+        logger.error(`Tarama hatası: ${error.message}`);
+    }
+}
+
+// Belirli aralıklarla çalıştır
+const INTERVAL = process.env.SCRAPE_INTERVAL || 3600000; // Varsayılan: 1 saat
+
+async function startRunner() {
+    logger.info(`Tarayıcı başlatılıyor (${INTERVAL/1000} saniye aralıklarla)...`);
+    
+    // İlk çalıştırma
+    await main();
+    
+    // Periyodik çalıştırma
+    setInterval(main, INTERVAL);
+}
+
+// Eğer doğrudan çalıştırılırsa
+if (require.main === module) {
+    startRunner();
+}
+
+module.exports = {
+    startRunner,
+    runScraper
+};
 
 console.log('🚀 Cron servisi aktif. Saat başı çalışacak...');

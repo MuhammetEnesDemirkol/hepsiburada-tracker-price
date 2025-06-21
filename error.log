@@ -1,0 +1,12 @@
+{"level":"error","message":"Veritabanı bağlantı hatası: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T11:28:23.817Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T11:28:24.068Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T12:03:28.720Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T12:51:39.216Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T12:52:21.396Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T13:06:59.569Z"}
+{"level":"error","message":"Sistem testi sırasında hata: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string","timestamp":"2025-06-17T13:07:38.210Z"}
+{"level":"error","message":"Bildirim gönderme hatası: change.change_percentage.toFixed is not a function","timestamp":"2025-06-17T13:08:44.973Z"}
+{"level":"error","message":"Bildirim gönderme hatası: logger.success is not a function","timestamp":"2025-06-17T13:22:13.465Z"}
+{"level":"error","message":"Sistem testi sırasında hata:","timestamp":"2025-06-17T13:22:13.481Z"}
+{"level":"error","message":"Bildirim gönderme hatası: logger.success is not a function","timestamp":"2025-06-17T13:30:12.976Z"}
+{"level":"error","message":"Sistem testi sırasında hata:","timestamp":"2025-06-17T13:30:12.994Z"}

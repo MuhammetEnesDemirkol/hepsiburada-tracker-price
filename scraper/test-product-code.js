@@ -11,19 +11,34 @@ const testLinks = [
 ];
 
 function extractProductCode(link) {
-  // En yaygın Hepsiburada kodlarını yakala (HBC, HBV, HB, ailepil, vs.)
-  const match = link.match(/-(HBC|HBV|HB)[A-Z0-9]+|-(ailepil[0-9]+)/i);
-  if (match) {
-    return match[0].replace('-', '');
+  // 1. Önce p-XXXXX formatını dene (en yaygın)
+  const pMatch = link.match(/p-([A-Z0-9]+)/);
+  if (pMatch) return pMatch[1];
+
+  // 2. pm-XXXXX formatını dene
+  const pmMatch = link.match(/pm-([A-Z0-9]+)/);
+  if (pmMatch) return pmMatch[1];
+
+  // 3. HBC, HBV, HB, ailepil formatlarını dene
+  const otherMatch = link.match(/-(HBC|HBV|HB)[A-Z0-9]+|-(ailepil[0-9]+)/i);
+  if (otherMatch) {
+    return otherMatch[0].replace('-', '');
   }
-  // Son fallback: linkin sonunda 8+ karakterli büyük harf/rakam varsa onu al
+
+  // 4. /urunler/XXXXX formatını dene
+  const urunlerMatch = link.match(/\/urunler\/([A-Z0-9]+)/);
+  if (urunlerMatch) return urunlerMatch[1];
+
+  // 5. Son fallback: linkin sonunda 8+ karakterli büyük harf/rakam varsa onu al
   const fallback = link.match(/-([A-Z0-9]{8,})$/i);
   return fallback ? fallback[1] : null;
 }
 
-testLinks.forEach(link => {
+console.log('=== Ürün Kodu Test Sonuçları ===\n');
+
+testLinks.forEach((link, index) => {
   const code = extractProductCode(link);
-  console.log(`Link: ${link}`);
-  console.log(`Kod: ${code}`);
-  console.log('---');
+  console.log(`${index + 1}. Link: ${link}`);
+  console.log(`   Kod: ${code || 'BULUNAMADI ❌'}`);
+  console.log('');
 }); 

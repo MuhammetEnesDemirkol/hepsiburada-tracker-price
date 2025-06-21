@@ -1,0 +1,5 @@
+aiohttp==3.9.3
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
+SQLAlchemy==2.0.27
+psycopg2-binary==2.9.9 

@@ -6,6 +6,7 @@ const db = require('./db');
 const axios = require('axios');
 const { exec } = require('child_process');
 const { formatMessage } = require('../api/notify');
+const notificationService = require('../services/notification');
 
 const productsPerPage = 36;
 const outputDir = path.join(__dirname, 'products');
@@ -153,24 +154,48 @@ async function scrapeCategory(category, browser) {
       console.log(`🌐 ${category.title} - İlk sayfa yükleniyor...`);
       await loadPage(baseURL);
 
-      // Sayfanın yüklenmesini bekle
+      // Sayfanın yüklenmesini bekle (kategori başlığı selectoru)
       await page.waitForSelector('div[class^="VZbTh5SU1OsNkwSvy5FF"]', { timeout: PAGE_TIMEOUT });
 
-      // Toplam ürün sayısını al
-      const totalText = await page.$eval(
-        'div[class^="VZbTh5SU1OsNkwSvy5FF"]',
-        (el) => el.textContent.trim()
-      );
-      const totalProducts = parseInt(totalText.match(/\d+/)[0]) || 0;
-      const totalPages = Math.ceil(totalProducts / productsPerPage);
+      // Toplam ürün sayısını ve sayfa sayısını hesapla
+      let totalProducts = 0;
+      let totalPages = 1;
+      
+      try {
+        // Toplam ürün sayısını al
+        const totalText = await page.$eval(
+          'div[class^="VZbTh5SU1OsNkwSvy5FF"]',
+          (el) => el.textContent.trim()
+        );
+        totalProducts = parseInt(totalText.match(/\d+/)[0]) || 0;
+        totalPages = Math.ceil(totalProducts / productsPerPage);
 
-      console.log(`\n📊 ${category.title} kategorisi bilgileri:`);
-      console.log(`   • Toplam ürün sayısı: ${totalProducts}`);
-      console.log(`   • Toplam sayfa sayısı: ${totalPages}`);
-      console.log('   • Sayfa başına ürün: ' + productsPerPage + '\n');
+        console.log(`${category.title} kategorisi bilgileri:`);
+        console.log(`   • Toplam ürün sayısı: ${totalProducts}`);
+        console.log(`   • Toplam sayfa sayısı: ${totalPages}`);
+        console.log(`   • Sayfa başına ürün: ${productsPerPage}`);
+      } catch (error) {
+        console.log(`⚠️ Toplam ürün sayısı alınamadı, sadece ilk sayfa taranacak: ${error.message}`);
+        totalPages = 1;
+      }
 
-      // İlk sayfadaki ürünleri al
-      console.log(`📥 Sayfa 1/${totalPages} taranıyor...`);
+      // Ürün listesi selectorunu da bekle (daha güvenli)
+      try {
+        await page.waitForSelector('li[class^="productListContent-"]', { timeout: PAGE_TIMEOUT });
+      } catch (e) {
+        // Selector bulunamazsa sayfanın HTML'ini kaydet
+        const html = await page.content();
+        const failPath = path.join(outputDir, `${slug}_fail_${Date.now()}.html`);
+        fs.writeFileSync(failPath, html, 'utf8');
+        console.error(`❌ Ürün listesi selectoru bulunamadı! Sayfa kaydedildi: ${failPath}`);
+        // Bot koruması tespiti
+        if (html.includes('captcha') || html.toLowerCase().includes('robot olmadığınızı')) {
+          console.error('⚠️ Bot koruması/captcha tespit edildi!');
+        }
+        throw new Error('Ürün listesi selectoru bulunamadı');
+      }
+
+      // Ürünleri çek
       let firstPageProducts = await page.evaluate(() => {
         const items = [];
         document.querySelectorAll('li[class^="productListContent-"]').forEach((el) => {
@@ -212,6 +237,19 @@ async function scrapeCategory(category, browser) {
         });
         return items;
       });
+
+      // Eğer ürün bulunamazsa, sayfanın HTML'ini kaydet ve logla
+      if (!firstPageProducts || firstPageProducts.length === 0) {
+        const html = await page.content();
+        const failPath = path.join(outputDir, `${slug}_no_products_${Date.now()}.html`);
+        fs.writeFileSync(failPath, html, 'utf8');
+        console.error(`❌ Hiç ürün bulunamadı! Sayfa kaydedildi: ${failPath}`);
+        // Bot koruması tespiti
+        if (html.includes('captcha') || html.toLowerCase().includes('robot olmadığınızı')) {
+          console.error('⚠️ Bot koruması/captcha tespit edildi!');
+        }
+      }
+
       // Node.js tarafında image null olanları logla
       firstPageProducts.forEach(p => { if (!p.image) console.log('[NODE GÖRSEL LOG] Görsel yok:', p.title, p.link); });
       // Linkleri temizle
@@ -318,27 +356,91 @@ async function scrapeCategory(category, browser) {
       
       // Önceki verileri oku
       let previousProducts = [];
+      let isFirstScan = false;
       if (fs.existsSync(previousPath)) {
         try {
           previousProducts = JSON.parse(fs.readFileSync(previousPath, 'utf8'));
         } catch (e) {
-          console.log('⚠️ Önceki veriler okunamadı, yeni dosya oluşturuluyor.');
+          console.log(`⚠️ Önceki veriler okunamadı, ilk tarama olarak kabul ediliyor: ${e.message}`);
+          isFirstScan = true;
+        }
+      } else {
+        isFirstScan = true;
+        console.log(`📝 ${category.title} kategorisi için ilk tarama yapılıyor`);
+      }
+
+      // Önceki ürünleri map'e çevir (öncelik ürün kodu, yoksa link)
+      const previousMap = new Map();
+      for (const p of previousProducts) {
+        if (p.product_code) {
+          previousMap.set(p.product_code, p);
+        } else if (p.link) {
+          previousMap.set(p.link, p);
         }
       }
 
-      // Önceki ürünleri map'e çevir (link yerine ürün kodu ile)
-      const previousMap = new Map(previousProducts.map(p => [p.product_code, p]));
-
       // Değişiklikleri kontrol et
       for (const newProduct of cleanedProducts) {
-        const oldProduct = previousMap.get(newProduct.product_code);
+        const key = newProduct.product_code || newProduct.link;
+        const oldProduct = previousMap.get(key);
+        
         if (!oldProduct) {
           newProducts++;
           newProductList.push(newProduct);
+          // Yeni ürün için change_percentage ekle
+          newProduct.change_percentage = {
+            changeType: 'new',
+            change: 0,
+            changePercentage: 0,
+            oldPrice: 0,
+            newPrice: parseFloat(newProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'))
+          };
         } else {
+          // Eğer eski kayıtta görsel yok ama yenisinde varsa, eski kaydı güncelle ama bildirim gönderme
+          let updated = false;
+          if ((!oldProduct.image || oldProduct.image === '-') && newProduct.image && newProduct.image !== '-') {
+            oldProduct.image = newProduct.image;
+            updated = true;
+          }
+          // Diğer alanlar için de benzer güncelleme yapılabilir (ör: title, price vs.)
+          // Eğer sadece güncelleme olduysa, yeni ürün bildirimi gönderme
+          if (updated) {
+            continue;
+          }
           // Fiyat değişikliğini kontrol et
           const oldPrice = parseFloat(oldProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'));
           const newPrice = parseFloat(newProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'));
+          
+          // Fiyat değişikliği hesapla
+          const priceChange = newPrice - oldPrice;
+          const priceChangePercentage = oldPrice > 0 ? ((priceChange / oldPrice) * 100) : 0;
+          
+          // change_percentage alanını ekle
+          if (priceChange === 0) {
+            newProduct.change_percentage = {
+              changeType: 'no_change',
+              change: 0,
+              changePercentage: 0,
+              oldPrice: oldPrice,
+              newPrice: newPrice
+            };
+          } else if (priceChange > 0) {
+            newProduct.change_percentage = {
+              changeType: 'increase',
+              change: priceChange,
+              changePercentage: priceChangePercentage,
+              oldPrice: oldPrice,
+              newPrice: newPrice
+            };
+          } else {
+            newProduct.change_percentage = {
+              changeType: 'decrease',
+              change: Math.abs(priceChange),
+              changePercentage: Math.abs(priceChangePercentage),
+              oldPrice: oldPrice,
+              newPrice: newPrice
+            };
+          }
           
           // Sadece fiyat düşüşlerini kontrol et
           if (newPrice < oldPrice) {
@@ -367,26 +469,25 @@ async function scrapeCategory(category, browser) {
       console.log(`   • Fiyat değişikliği: ${priceChanges} ürün`);
       console.log(`   • Yeni ürün: ${newProducts} ürün`);
 
-      if (priceChanges > 0 || newProducts > 0) {
+      if (!isFirstScan && (priceChanges > 0 || newProducts > 0)) {
         console.log('\n🔔 Bildirim gönderiliyor...');
         try {
           // Fiyat değişikliği olan ürünler için bildirim
           if (priceChanges > 0) {
             for (const change of changedProducts) {
-              const formatted = formatMessage({
-                type: 'price-change',
-                title: change.new.title,
-                oldPrice: change.old.price,
-                newPrice: change.new.price,
-                link: change.new.link,
-                productCode: change.new.product_code,
-                imageUrl: change.new.image,
-              });
+              const formatted =
+                `💸 Fiyatı güncellenen ürün: ${change.new.title}\n` +
+                `📦 Ürün Kodu: ${change.new.product_code || '-'}\n` +
+                `🖼️ Görsel: ${change.new.image || '-'}\n` +
+                `📈 Eski fiyat: ${change.old.price}\n` +
+                `📊 Yeni fiyat: ${change.new.price}\n` +
+                `⚡️ Eşik değeri: %${category.discount_threshold}\n\n` +
+                `İndirim oranı: %${change.changePercentage}\n` +
+                `🔗 ${change.new.link}`;
               await saveLog(slug, formatted, 'price_change');
               await sendTelegramMessage(formatted);
             }
           }
-
           // Yeni ürünler için bildirim
           if (newProducts > 0) {
             for (const product of newProductList) {
@@ -415,6 +516,21 @@ async function scrapeCategory(category, browser) {
       // Tarama bittikten sonra kategori bekleme süresi
       console.log(`\n⏳ ${category.title} kategorisi için ${DELAY_BETWEEN_CATEGORIES/1000} saniye bekleniyor...`);
       await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CATEGORIES));
+
+      // Kategori özeti bildirimi gönder - HER DURUMDA ÇALIŞIR
+      try {
+        if (typeof cleanedProducts !== 'undefined' && cleanedProducts.length > 0) {
+          console.log('🔔 Kategori özeti bildirimi gönderiliyor...');
+          console.log(`📊 ${cleanedProducts.length} ürün için özet hazırlanıyor...`);
+          await notificationService.sendSummaryNotification(cleanedProducts, category.title);
+          console.log('✅ Kategori özeti bildirimi başarıyla gönderildi');
+        } else {
+          console.log('⚠️ Özet bildirimi gönderilemedi: Ürün verisi bulunamadı');
+        }
+      } catch (e) {
+        console.error('❌ Kategori özeti bildirimi gönderilemedi:', e.message);
+        console.error('❌ Hata detayı:', e);
+      }
 
       return true;
     } catch (error) {
