@@ -44,7 +44,7 @@ router.get('/', async (req, res) => {
 
     // Ürünleri getir
     const result = await db.query(
-      `SELECT id, slug, title, link, status,
+      `SELECT id, slug, title, link,
               (SELECT price FROM price_history WHERE product_id = products.id ORDER BY created_at DESC LIMIT 1) AS current_price,
               (SELECT MIN(price::float) FROM price_history WHERE product_id = products.id) AS lowest_price,
               (SELECT created_at FROM price_history WHERE product_id = products.id ORDER BY created_at DESC LIMIT 1) AS checked_at

@@ -26,14 +26,6 @@ system.log
 *.sqlite
 *.sqlite3
 
-# Scraped data files
-scraper/products/
-scraper/changes.json
-scraper/failed-notifications.json
-scraper/previous.json
-scraper/categories.json
-scraper/product.json
-
 # Screenshots and images
 *.png
 *.jpg

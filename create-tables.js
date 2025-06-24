@@ -2,22 +2,21 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 async function createTables() {
     const client = await pool.connect();
     try {
-        console.log('Tablolar oluşturuluyor...');
+        console.log('🗄️ Veritabanı tabloları oluşturuluyor...\n');
 
-        // Önce mevcut tabloları temizle
-        await client.query(`
-            DROP TABLE IF EXISTS logs CASCADE;
-            DROP TABLE IF EXISTS price_history CASCADE;
-            DROP TABLE IF EXISTS products CASCADE;
-            DROP TABLE IF EXISTS categories CASCADE;
-        `);
-        console.log('✅ Eski tablolar temizlendi');
+        // Önce mevcut tabloları sil (eğer varsa)
+        console.log('🧹 Eski tablolar temizleniyor...');
+        await client.query('DROP TABLE IF EXISTS price_history CASCADE');
+        await client.query('DROP TABLE IF EXISTS products CASCADE');
+        await client.query('DROP TABLE IF EXISTS categories CASCADE');
+        console.log('✅ Eski tablolar silindi');
 
         // Kategoriler tablosu
         await client.query(`
@@ -27,8 +26,7 @@ async function createTables() {
                 slug VARCHAR(255) NOT NULL UNIQUE,
                 url TEXT,
                 discount_threshold NUMERIC DEFAULT 10,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status VARCHAR(50) DEFAULT 'active'
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
         console.log('✅ categories tablosu oluşturuldu');
@@ -39,12 +37,10 @@ async function createTables() {
                 id SERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 price NUMERIC NOT NULL,
-                link TEXT NOT NULL,
-                image TEXT,
-                product_code VARCHAR(255) UNIQUE,
+                link TEXT NOT NULL UNIQUE,
+                product_code VARCHAR(255) UNIQUE NOT NULL,
                 slug VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status VARCHAR(50) DEFAULT 'active',
                 lowest_price NUMERIC,
                 FOREIGN KEY (slug) REFERENCES categories(slug)
             );
@@ -76,15 +72,25 @@ async function createTables() {
         `);
         console.log('✅ logs tablosu oluşturuldu');
 
-        // Test kategorisi ekle
-        await client.query(`
-            INSERT INTO categories (title, slug, url, discount_threshold)
-            VALUES ('Test Kategori', 'test-kategori', 'https://www.hepsiburada.com/test-kategori', 10)
-            ON CONFLICT (slug) DO NOTHING;
-        `);
-        console.log('✅ Test kategorisi eklendi');
+        // Varsayılan kategorileri ekle
+        const defaultCategories = [
+            ['Robot Süpürge', 'robot-supurge-c-80160033', 'https://www.hepsiburada.com/robot-supurge-c-80160033', 10],
+            ['Oto Koltukları', 'oto-koltuklari-c-23021016', 'https://www.hepsiburada.com/oto-koltuklari-c-23021016', 10],
+            ['Akülü Pedallı Araçlar', 'akulu-pedalli-araclar-c-306860', 'https://www.hepsiburada.com/akulu-pedalli-araclar-c-306860', 10],
+            ['Drone Multikopter', 'drone-multikopter-c-60006033', 'https://www.hepsiburada.com/drone-multikopter-c-60006033', 10],
+            ['iPhone iOS Telefonlar', 'iphone-ios-telefonlar-c-60005202', 'https://www.hepsiburada.com/iphone-ios-telefonlar-c-60005202', 10]
+        ];
 
-        console.log('\nTüm tablolar başarıyla oluşturuldu!');
+        for (const [title, slug, url, threshold] of defaultCategories) {
+            await client.query(`
+                INSERT INTO categories (title, slug, url, discount_threshold)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (slug) DO NOTHING;
+            `, [title, slug, url, threshold]);
+            console.log(`✅ Kategori eklendi: ${title}`);
+        }
+
+        console.log('\nTüm tablolar ve kategoriler başarıyla oluşturuldu!');
 
     } catch (error) {
         console.error('Hata:', error.message);

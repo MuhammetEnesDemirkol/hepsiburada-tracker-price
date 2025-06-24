@@ -115,12 +115,12 @@ class DatabaseService {
             await client.query('BEGIN');
             
             const result = await client.query(
-                `INSERT INTO categories (title, slug, discount_threshold, status)
-                 VALUES ($1, $2, $3, $4)
+                `INSERT INTO categories (title, slug, discount_threshold)
+                 VALUES ($1, $2, $3)
                  ON CONFLICT (slug) DO UPDATE
-                 SET title = $1, discount_threshold = $3, status = $4
+                 SET title = $1, discount_threshold = $3
                  RETURNING *`,
-                [category.title, category.slug, category.discount_threshold, category.status]
+                [category.title, category.slug, category.discount_threshold]
             );
 
             await client.query('COMMIT');
@@ -139,12 +139,12 @@ class DatabaseService {
             await client.query('BEGIN');
             
             const result = await client.query(
-                `INSERT INTO products (title, price, link, image, product_code, slug, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)
+                `INSERT INTO products (title, price, link, image, product_code, slug)
+                 VALUES ($1, $2, $3, $4, $5, $6)
                  ON CONFLICT (product_code) DO UPDATE
-                 SET title = $1, price = $2, link = $3, image = $4, status = $7
+                 SET title = $1, price = $2, link = $3, image = $4
                  RETURNING *`,
-                [product.title, product.price, product.link, product.image, product.product_code, product.slug, product.status]
+                [product.title, product.price, product.link, product.image, product.product_code, product.slug]
             );
 
             // Fiyat geçmişini kaydet
@@ -169,7 +169,6 @@ class DatabaseService {
             SELECT p.*, c.title as category_title, c.discount_threshold
             FROM products p
             JOIN categories c ON p.slug = c.slug
-            WHERE p.status = 'active'
             ORDER BY p.created_at DESC
         `);
         return result.rows;
@@ -203,16 +202,14 @@ class DatabaseService {
              FROM products p
              JOIN categories c ON p.slug = c.slug
              WHERE p.created_at > NOW() - INTERVAL '${hours} hour'
-             AND p.status = 'active'
              ORDER BY p.created_at DESC`
         );
         return result.rows;
     }
 
-    async getActiveCategories() {
+    async getAllCategories() {
         const result = await pool.query(
-            'SELECT * FROM categories WHERE status = $1',
-            ['active']
+            'SELECT * FROM categories ORDER BY id'
         );
         return result.rows;
     }

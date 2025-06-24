@@ -3,13 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const db = require('./db');
-const axios = require('axios');
-const { exec } = require('child_process');
-const { formatMessage } = require('../api/notify');
 const notificationService = require('../services/notification');
 
 const productsPerPage = 36;
-const outputDir = path.join(__dirname, 'products');
 const PAGE_TIMEOUT = 45000; // 45 saniye
 const GLOBAL_TIMEOUT = 1800000; // 30 dakika
 const RETRY_COUNT = 3; // Sayfa yükleme başarısız olursa 3 kez dene
@@ -39,28 +35,6 @@ async function saveLog(categorySlug, message, type = 'info') {
   }
 }
 
-// Telegram bildirim fonksiyonu
-async function sendTelegramMessage(message) {
-  try {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    
-    if (!botToken || !chatId) {
-      console.error('❌ Telegram bot token veya chat ID bulunamadı!');
-      return;
-    }
-
-    const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
-    await axios.post(url, {
-      chat_id: chatId,
-      text: message,
-      parse_mode: 'HTML'
-    });
-  } catch (error) {
-    console.error('❌ Telegram mesajı gönderilirken hata:', error.message);
-  }
-}
-
 // 🧠 Veritabanından kategorileri al
 async function loadCategoriesFromDB() {
   const result = await db.query('SELECT * FROM categories ORDER BY id');
@@ -77,6 +51,212 @@ function cleanProductLink(link) {
     return link;
   } catch (e) {
     return link;
+  }
+}
+
+// Fiyat parsing fonksiyonu
+function parsePrice(priceString) {
+  if (typeof priceString === 'number') {
+    return priceString;
+  }
+  if (!priceString || typeof priceString !== 'string') {
+    console.log(`⚠️ Geçersiz fiyat formatı: ${priceString}`);
+    return null;
+  }
+  
+  // Fiyatı temizle
+  let cleanPrice = priceString.trim();
+  
+  // Tüm boşlukları kaldır
+  cleanPrice = cleanPrice.replace(/\s+/g, '');
+  
+  // TL, ₺, $, € gibi para birimlerini kaldır
+  cleanPrice = cleanPrice.replace(/[₺$€£]/g, '');
+  cleanPrice = cleanPrice.replace(/TL/gi, '');
+  cleanPrice = cleanPrice.replace(/TRY/gi, '');
+  
+  // Sadece rakam, nokta ve virgül bırak
+  cleanPrice = cleanPrice.replace(/[^\d.,]/g, '');
+  
+  // Eğer hiç rakam yoksa
+  if (!/\d/.test(cleanPrice)) {
+    console.log(`⚠️ Fiyatta rakam bulunamadı: "${priceString}" -> "${cleanPrice}"`);
+    return null;
+  }
+  
+  let numericPrice = null;
+  
+  // Türk fiyat formatlarını parse et
+  if (cleanPrice.includes(',') && cleanPrice.includes('.')) {
+    // Format: "1.234,56" veya "1.234,56" -> 1234.56
+    const parts = cleanPrice.split(',');
+    if (parts.length === 2) {
+      const integerPart = parts[0].replace(/\./g, ''); // Binlik ayırıcıları kaldır
+      const decimalPart = parts[1];
+      numericPrice = parseFloat(integerPart + '.' + decimalPart);
+    }
+  } else if (cleanPrice.includes(',') && !cleanPrice.includes('.')) {
+    // Format: "1234,56" -> 1234.56
+    numericPrice = parseFloat(cleanPrice.replace(',', '.'));
+  } else if (cleanPrice.includes('.') && !cleanPrice.includes(',')) {
+    // Format: "1234.56" veya "1.234" -> 1234.56 veya 1234
+    // Eğer son iki karakter rakam değilse, binlik ayırıcı olarak kabul et
+    const lastTwoChars = cleanPrice.slice(-2);
+    if (/^\d{2}$/.test(lastTwoChars)) {
+      // Muhtemelen ondalık format: "1234.56"
+      numericPrice = parseFloat(cleanPrice);
+    } else {
+      // Muhtemelen binlik ayırıcı: "1.234"
+      numericPrice = parseFloat(cleanPrice.replace(/\./g, ''));
+    }
+  } else {
+    // Sadece rakamlar: "1234"
+    numericPrice = parseFloat(cleanPrice);
+  }
+  
+  // Son kontrol
+  if (isNaN(numericPrice) || numericPrice <= 0) {
+    console.log(`⚠️ Fiyat parse edilemedi: "${priceString}" -> "${cleanPrice}" -> ${numericPrice}`);
+    return null;
+  }
+  
+  // Makul fiyat aralığı kontrolü (1 TL - 1.000.000 TL)
+  if (numericPrice < 1 || numericPrice > 1000000) {
+    console.log(`⚠️ Makul olmayan fiyat: ${numericPrice} TL (${priceString})`);
+    return null;
+  }
+  
+  return numericPrice;
+}
+
+// Ürünleri veritabanına kaydet
+async function saveProductsToDatabase(products, slug) {
+  try {
+    let successCount = 0;
+    let errorCount = 0;
+    let savedProducts = [];
+
+    for (const product of products) {
+      const { title, price, link } = product;
+      const productCode = product.product_code;
+      
+      if (!productCode) {
+        console.log(`⚠️ Ürün kodu bulunamadı, atlanıyor: ${title}`);
+        continue;
+      }
+
+      const numericPrice = parsePrice(price);
+
+      if (numericPrice === null) {
+        console.log(`⚠️ Geçersiz fiyat, atlanıyor: ${title} - ${price}`);
+        continue;
+      }
+
+      try {
+        // Önce ürünün mevcut olup olmadığını ve fiyatını kontrol et
+        const existingProduct = await db.query(
+          'SELECT id, price FROM products WHERE product_code = $1',
+          [productCode]
+        );
+
+        if (existingProduct.rows.length > 0) {
+          // Ürün zaten var, fiyat değişikliği kontrol et
+          const existingPrice = parseFloat(existingProduct.rows[0].price);
+          
+          if (existingPrice === numericPrice) {
+            // Fiyat değişmedi, güncelleme yapma
+            console.log(`ℹ️ Fiyat değişmedi, güncelleme yapılmıyor: ${title} (${numericPrice} TL)`);
+            continue;
+          }
+          
+          // Fiyat değişti, güncelle
+          const result = await db.query(
+            `UPDATE products 
+             SET title = $1, price = $2, link = $3,
+                 lowest_price = LEAST($2, COALESCE(lowest_price, $2))
+             WHERE product_code = $4
+             RETURNING id`,
+            [title, numericPrice, link, productCode]
+          );
+
+          const productId = result.rows[0].id;
+
+          // Fiyat geçmişine kaydet
+          await db.query(
+            'INSERT INTO price_history (product_id, price, created_at) VALUES ($1, $2, NOW())',
+            [productId, numericPrice]
+          );
+
+          successCount++;
+          
+          // Başarıyla kaydedilen ürünü listeye ekle
+          savedProducts.push({
+            id: productId,
+            title,
+            price: numericPrice,
+            link,
+            product_code: productCode,
+            slug
+          });
+
+        } else {
+          // Yeni ürün, ekle
+          const result = await db.query(
+            `INSERT INTO products 
+             (title, price, link, product_code, slug, lowest_price) 
+             VALUES ($1, $2, $3, $4, $5, $2) 
+             RETURNING id`,
+            [title, numericPrice, link, productCode, slug]
+          );
+
+          const productId = result.rows[0].id;
+
+          // Fiyat geçmişine kaydet
+          await db.query(
+            'INSERT INTO price_history (product_id, price, created_at) VALUES ($1, $2, NOW())',
+            [productId, numericPrice]
+          );
+
+          successCount++;
+          
+          // Başarıyla kaydedilen ürünü listeye ekle
+          savedProducts.push({
+            id: productId,
+            title,
+            price: numericPrice,
+            link,
+            product_code: productCode,
+            slug
+          });
+        }
+
+      } catch (error) {
+        console.error(`❌ Ürün kaydedilirken hata: ${title} - ${error.message}`);
+        errorCount++;
+      }
+    }
+
+    console.log(`✅ Veritabanı kayıt tamamlandı: ${successCount} başarılı, ${errorCount} hata`);
+    
+    return savedProducts;
+    
+  } catch (error) {
+    console.error('❌ Veritabanı kayıt hatası:', error.message);
+    throw error;
+  }
+}
+
+// Veritabanından önceki ürünleri al
+async function getPreviousProductsFromDB(slug) {
+  try {
+    const result = await db.query(
+      'SELECT * FROM products WHERE slug = $1',
+      [slug]
+    );
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Önceki ürünler alınırken hata:', error.message);
+    return [];
   }
 }
 
@@ -185,7 +365,7 @@ async function scrapeCategory(category, browser) {
       } catch (e) {
         // Selector bulunamazsa sayfanın HTML'ini kaydet
         const html = await page.content();
-        const failPath = path.join(outputDir, `${slug}_fail_${Date.now()}.html`);
+        const failPath = path.join(__dirname, `${slug}_fail_${Date.now()}.html`);
         fs.writeFileSync(failPath, html, 'utf8');
         console.error(`❌ Ürün listesi selectoru bulunamadı! Sayfa kaydedildi: ${failPath}`);
         // Bot koruması tespiti
@@ -196,7 +376,7 @@ async function scrapeCategory(category, browser) {
       }
 
       // Ürünleri çek
-      let firstPageProducts = await page.evaluate(() => {
+      const firstPageProducts = await page.evaluate(() => {
         const items = [];
         document.querySelectorAll('li[class^="productListContent-"]').forEach((el) => {
           const titleEl = el.querySelector('h2[class^="title-module_titleRoot"] span');
@@ -206,32 +386,12 @@ async function scrapeCategory(category, browser) {
           const title = titleEl?.innerText.trim();
           const price = priceEl?.innerText.trim();
           const link = linkEl?.getAttribute('href');
-          let image = null;
-          // Öncelik sırası: özel class'lı img, kart içindeki ilk img, ilk source srcset
-          const imageEl = el.querySelector('img.hbImageView-module_hbImage__Ca3xO') || el.querySelector('img');
-          if (imageEl && imageEl.getAttribute('src')) {
-            image = imageEl.getAttribute('src');
-          } else {
-            const sourceEl = el.querySelector('source') || el.querySelector('source.hbImageView-module_hbImage__Ca3xO');
-            if (sourceEl && sourceEl.getAttribute('srcset')) {
-              image = sourceEl.getAttribute('srcset').split(',')[0].split(' ')[0];
-            } else {
-              // Fallback: data-src veya style background-image
-              const dataSrc = el.querySelector('[data-src]');
-              if (dataSrc) {
-                image = dataSrc.getAttribute('data-src');
-              } else if (el.style && el.style.backgroundImage) {
-                const bg = el.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
-                if (bg && bg[1]) image = bg[1];
-              }
-            }
-          }
+
           if (title && price && link) {
             items.push({
               title,
               price,
-              link: 'https://www.hepsiburada.com' + link,
-              image
+              link: 'https://www.hepsiburada.com' + link
             });
           }
         });
@@ -241,7 +401,7 @@ async function scrapeCategory(category, browser) {
       // Eğer ürün bulunamazsa, sayfanın HTML'ini kaydet ve logla
       if (!firstPageProducts || firstPageProducts.length === 0) {
         const html = await page.content();
-        const failPath = path.join(outputDir, `${slug}_no_products_${Date.now()}.html`);
+        const failPath = path.join(__dirname, `${slug}_no_products_${Date.now()}.html`);
         fs.writeFileSync(failPath, html, 'utf8');
         console.error(`❌ Hiç ürün bulunamadı! Sayfa kaydedildi: ${failPath}`);
         // Bot koruması tespiti
@@ -250,17 +410,15 @@ async function scrapeCategory(category, browser) {
         }
       }
 
-      // Node.js tarafında image null olanları logla
-      firstPageProducts.forEach(p => { if (!p.image) console.log('[NODE GÖRSEL LOG] Görsel yok:', p.title, p.link); });
-      // Linkleri temizle
-      firstPageProducts = firstPageProducts.map(p => {
+      // İlk sayfa ürünlerini ekle
+      const firstPageWithCodes = firstPageProducts.map(p => {
         const link = cleanProductLink(p.link);
         // HB ile başlayan kodu linkten çek
         const codeMatch = link.match(/(HB[A-Z0-9]+)/);
         return { ...p, link, product_code: codeMatch ? codeMatch[1] : null };
       });
-
-      allProducts.push(...firstPageProducts);
+      
+      allProducts.push(...firstPageWithCodes);
       console.log(`✅ Sayfa 1: ${firstPageProducts.length} ürün tarandı`);
 
       // Diğer sayfaları tara
@@ -290,39 +448,18 @@ async function scrapeCategory(category, browser) {
             const title = titleEl?.innerText.trim();
             const price = priceEl?.innerText.trim();
             const link = linkEl?.getAttribute('href');
-            let image = null;
-            // Öncelik sırası: özel class'lı img, kart içindeki ilk img, ilk source srcset
-            const imageEl = el.querySelector('img.hbImageView-module_hbImage__Ca3xO') || el.querySelector('img');
-            if (imageEl && imageEl.getAttribute('src')) {
-              image = imageEl.getAttribute('src');
-            } else {
-              const sourceEl = el.querySelector('source') || el.querySelector('source.hbImageView-module_hbImage__Ca3xO');
-              if (sourceEl && sourceEl.getAttribute('srcset')) {
-                image = sourceEl.getAttribute('srcset').split(',')[0].split(' ')[0];
-              } else {
-                // Fallback: data-src veya style background-image
-                const dataSrc = el.querySelector('[data-src]');
-                if (dataSrc) {
-                  image = dataSrc.getAttribute('data-src');
-                } else if (el.style && el.style.backgroundImage) {
-                  const bg = el.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
-                  if (bg && bg[1]) image = bg[1];
-                }
-              }
-            }
+
             if (title && price && link) {
               items.push({
                 title,
                 price,
-                link: 'https://www.hepsiburada.com' + link,
-                image
+                link: 'https://www.hepsiburada.com' + link
               });
             }
           });
           return items;
         });
-        // Node.js tarafında image null olanları logla
-        pageProducts.forEach(p => { if (!p.image) console.log('[NODE GÖRSEL LOG] Görsel yok:', p.title, p.link); });
+
         // Linkleri temizle
         pageProducts = pageProducts.map(p => {
           const link = cleanProductLink(p.link);
@@ -340,13 +477,9 @@ async function scrapeCategory(category, browser) {
       // Dosyaya yazmadan önce tüm ürünlerin linkini temizle
       const cleanedProducts = allProducts.map(p => ({ ...p, link: cleanProductLink(p.link) }));
 
-      // Dosyaya yaz
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
-
-      const outputPath = path.join(outputDir, `${slug}.json`);
-      const previousPath = path.join(outputDir, `${slug}_previous.json`);
+      // Veritabanından önceki ürünleri al
+      console.log('\n💾 Veritabanından önceki ürünler alınıyor...');
+      const previousProducts = await getPreviousProductsFromDB(slug);
 
       // Fiyat değişikliklerini ve yeni ürünleri kontrol et
       let priceChanges = 0;
@@ -354,92 +487,43 @@ async function scrapeCategory(category, browser) {
       let changedProducts = [];
       let newProductList = [];
       
-      // Önceki verileri oku
-      let previousProducts = [];
-      let isFirstScan = false;
-      if (fs.existsSync(previousPath)) {
-        try {
-          previousProducts = JSON.parse(fs.readFileSync(previousPath, 'utf8'));
-        } catch (e) {
-          console.log(`⚠️ Önceki veriler okunamadı, ilk tarama olarak kabul ediliyor: ${e.message}`);
-          isFirstScan = true;
-        }
-      } else {
-        isFirstScan = true;
-        console.log(`📝 ${category.title} kategorisi için ilk tarama yapılıyor`);
-      }
-
-      // Önceki ürünleri map'e çevir (öncelik ürün kodu, yoksa link)
+      // Önceki ürünleri map'e çevir (product_code ile)
       const previousMap = new Map();
       for (const p of previousProducts) {
         if (p.product_code) {
           previousMap.set(p.product_code, p);
-        } else if (p.link) {
-          previousMap.set(p.link, p);
         }
       }
 
       // Değişiklikleri kontrol et
       for (const newProduct of cleanedProducts) {
-        const key = newProduct.product_code || newProduct.link;
-        const oldProduct = previousMap.get(key);
+        const productCode = newProduct.product_code;
+        
+        if (!productCode) {
+          console.log(`⚠️ Ürün kodu bulunamadı: ${newProduct.title}`);
+          continue;
+        }
+
+        const oldProduct = previousMap.get(productCode);
         
         if (!oldProduct) {
           newProducts++;
           newProductList.push(newProduct);
-          // Yeni ürün için change_percentage ekle
-          newProduct.change_percentage = {
-            changeType: 'new',
-            change: 0,
-            changePercentage: 0,
-            oldPrice: 0,
-            newPrice: parseFloat(newProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'))
-          };
         } else {
-          // Eğer eski kayıtta görsel yok ama yenisinde varsa, eski kaydı güncelle ama bildirim gönderme
-          let updated = false;
-          if ((!oldProduct.image || oldProduct.image === '-') && newProduct.image && newProduct.image !== '-') {
-            oldProduct.image = newProduct.image;
-            updated = true;
-          }
-          // Diğer alanlar için de benzer güncelleme yapılabilir (ör: title, price vs.)
-          // Eğer sadece güncelleme olduysa, yeni ürün bildirimi gönderme
-          if (updated) {
+          // Fiyat değişikliğini kontrol et
+          const oldPrice = parsePrice(oldProduct.price);
+          const newPrice = parsePrice(newProduct.price);
+          
+          // Fiyat parse edilemezse atla
+          if (isNaN(oldPrice) || newPrice === null) {
+            console.log(`⚠️ Fiyat parse edilemedi, ürün atlanıyor: ${newProduct.title}`);
             continue;
           }
-          // Fiyat değişikliğini kontrol et
-          const oldPrice = parseFloat(oldProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'));
-          const newPrice = parseFloat(newProduct.price.replace(/[^0-9,]/g, '').replace(',', '.'));
           
-          // Fiyat değişikliği hesapla
-          const priceChange = newPrice - oldPrice;
-          const priceChangePercentage = oldPrice > 0 ? ((priceChange / oldPrice) * 100) : 0;
-          
-          // change_percentage alanını ekle
-          if (priceChange === 0) {
-            newProduct.change_percentage = {
-              changeType: 'no_change',
-              change: 0,
-              changePercentage: 0,
-              oldPrice: oldPrice,
-              newPrice: newPrice
-            };
-          } else if (priceChange > 0) {
-            newProduct.change_percentage = {
-              changeType: 'increase',
-              change: priceChange,
-              changePercentage: priceChangePercentage,
-              oldPrice: oldPrice,
-              newPrice: newPrice
-            };
-          } else {
-            newProduct.change_percentage = {
-              changeType: 'decrease',
-              change: Math.abs(priceChange),
-              changePercentage: Math.abs(priceChangePercentage),
-              oldPrice: oldPrice,
-              newPrice: newPrice
-            };
+          // Fiyatlar aynıysa atla
+          if (oldPrice === newPrice) {
+            console.log(`ℹ️ Fiyat değişmedi, atlanıyor: ${newProduct.title} (${newPrice} TL)`);
+            continue;
           }
           
           // Sadece fiyat düşüşlerini kontrol et
@@ -458,49 +542,73 @@ async function scrapeCategory(category, browser) {
         }
       }
 
-      // Yeni verileri kaydet
-      fs.writeFileSync(outputPath, JSON.stringify(cleanedProducts, null, 2), 'utf8');
-      
-      // Önceki verileri güncelle
-      fs.writeFileSync(previousPath, JSON.stringify(cleanedProducts, null, 2), 'utf8');
+      // ÖNCE veritabanına kaydet
+      console.log('\n💾 Ürünler veritabanına kaydediliyor...');
+      let savedProducts = [];
+      try {
+        savedProducts = await saveProductsToDatabase(cleanedProducts, slug);
+        console.log('✅ Ürünler veritabanına kaydedildi');
+      } catch (error) {
+        console.error('❌ Veritabanına kayıt hatası:', error.message);
+        // Veritabanına kayıt başarısız olursa bildirim gönderme
+        return false;
+      }
 
       console.log('\n📊 Tarama Sonuçları:');
       console.log(`   • Toplam taranan ürün: ${cleanedProducts.length}`);
       console.log(`   • Fiyat değişikliği: ${priceChanges} ürün`);
       console.log(`   • Yeni ürün: ${newProducts} ürün`);
 
-      if (!isFirstScan && (priceChanges > 0 || newProducts > 0)) {
+      // SADECE başarıyla kaydedilen ürünler için bildirim gönder
+      if (priceChanges > 0 || newProducts > 0) {
         console.log('\n🔔 Bildirim gönderiliyor...');
         try {
           // Fiyat değişikliği olan ürünler için bildirim
           if (priceChanges > 0) {
             for (const change of changedProducts) {
+              // Ürünün veritabanında başarıyla kaydedilip kaydedilmediğini kontrol et
+              const isSaved = savedProducts.some(p => p.product_code === change.new.product_code);
+              if (!isSaved) {
+                continue;
+              }
+
+              // Anında bildirim gönder
+              await notificationService.sendPriceChangeNotification({
+                old: change.old,
+                new: change.new,
+                changePercentage: change.changePercentage
+              });
+
               const formatted =
                 `💸 Fiyatı güncellenen ürün: ${change.new.title}\n` +
-                `📦 Ürün Kodu: ${change.new.product_code || '-'}\n` +
-                `🖼️ Görsel: ${change.new.image || '-'}\n` +
-                `📈 Eski fiyat: ${change.old.price}\n` +
-                `📊 Yeni fiyat: ${change.new.price}\n` +
+                `📦 Ürün Kodu: ${change.new.product_code}\n` +
+                `📈 Eski fiyat: ${change.old.price.toLocaleString('tr-TR')} TL\n` +
+                `📊 Yeni fiyat: ${parsePrice(change.new.price).toLocaleString('tr-TR')} TL\n` +
                 `⚡️ Eşik değeri: %${category.discount_threshold}\n\n` +
                 `İndirim oranı: %${change.changePercentage}\n` +
                 `🔗 ${change.new.link}`;
               await saveLog(slug, formatted, 'price_change');
-              await sendTelegramMessage(formatted);
             }
           }
           // Yeni ürünler için bildirim
           if (newProducts > 0) {
             for (const product of newProductList) {
-              const formatted = formatMessage({
-                type: 'new',
-                title: product.title,
-                price: product.price,
-                link: product.link,
-                productCode: product.product_code,
-                imageUrl: product.image,
-              });
+              // Ürünün veritabanında başarıyla kaydedilip kaydedilmediğini kontrol et
+              const isSaved = savedProducts.some(p => p.product_code === product.product_code);
+              if (!isSaved) {
+                continue;
+              }
+
+              // Anında bildirim gönder
+              await notificationService.sendNewProductNotification(product);
+
+              const formatted = 
+                `🆕 Yeni ürün eklendi: ${product.title}\n` +
+                `📦 Ürün Kodu: ${product.product_code}\n` +
+                `💰 Fiyat: ${parsePrice(product.price).toLocaleString('tr-TR')} TL\n` +
+                `🔗 ${product.link}`;
               await saveLog(slug, formatted, 'new_product');
-              await sendTelegramMessage(formatted);
+              console.log(`✅ Yeni ürün bildirimi gönderildi: ${product.title}`);
             }
           }
           console.log('✅ Bildirimler gönderildi');
@@ -516,21 +624,6 @@ async function scrapeCategory(category, browser) {
       // Tarama bittikten sonra kategori bekleme süresi
       console.log(`\n⏳ ${category.title} kategorisi için ${DELAY_BETWEEN_CATEGORIES/1000} saniye bekleniyor...`);
       await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_CATEGORIES));
-
-      // Kategori özeti bildirimi gönder - HER DURUMDA ÇALIŞIR
-      try {
-        if (typeof cleanedProducts !== 'undefined' && cleanedProducts.length > 0) {
-          console.log('🔔 Kategori özeti bildirimi gönderiliyor...');
-          console.log(`📊 ${cleanedProducts.length} ürün için özet hazırlanıyor...`);
-          await notificationService.sendSummaryNotification(cleanedProducts, category.title);
-          console.log('✅ Kategori özeti bildirimi başarıyla gönderildi');
-        } else {
-          console.log('⚠️ Özet bildirimi gönderilemedi: Ürün verisi bulunamadı');
-        }
-      } catch (e) {
-        console.error('❌ Kategori özeti bildirimi gönderilemedi:', e.message);
-        console.error('❌ Hata detayı:', e);
-      }
 
       return true;
     } catch (error) {
@@ -584,10 +677,12 @@ async function scrapeAll() {
     const success = await scrapeCategory(category, browser);
     if (success) {
       successCount++;
-      const outputPath = path.join(outputDir, `${category.slug}.json`);
-      if (fs.existsSync(outputPath)) {
-        const products = JSON.parse(fs.readFileSync(outputPath, 'utf8'));
-        totalProducts += products.length;
+      // Veritabanından ürün sayısını al
+      try {
+        const result = await db.query('SELECT COUNT(*) FROM products WHERE slug = $1', [category.slug]);
+        totalProducts += parseInt(result.rows[0].count);
+      } catch (error) {
+        console.error('❌ Ürün sayısı alınamadı:', error.message);
       }
     } else {
       failCount++;
@@ -615,15 +710,54 @@ async function scrapeAll() {
   console.log(`⏱️ Toplam süre: ${duration} saniye`);
   console.log('\n' + '='.repeat(50) + '\n');
 
-  // Scraping işlemi bittikten sonra veritabanına kayıt işlemini başlat
-  exec('node scraper/save-to-db.js', (err, stdout, stderr) => {
-    if (err) {
-      console.error('Veritabanı kaydı başlatılamadı:', err);
-      return;
+  // Genel özet bildirimi gönder
+  try {
+    console.log('🔔 Genel özet bildirimi buffer\'a ekleniyor...');
+    
+    // Veritabanından son tarama sonuçlarını al
+    const result = await db.query(`
+      SELECT 
+        p.title,
+        p.price as current_price,
+        ph.price as previous_price,
+        p.link,
+        p.product_code,
+        c.title as category_name
+      FROM products p
+      LEFT JOIN price_history ph ON p.id = ph.product_id
+      LEFT JOIN categories c ON p.slug = c.slug
+      WHERE ph.created_at >= NOW() - INTERVAL '1 hour'
+      ORDER BY ph.created_at DESC
+      LIMIT 100
+    `);
+
+    if (result.rows.length > 0) {
+      const summary = {
+        title: 'Genel Tarama Özeti',
+        previous_price: 0,
+        current_price: 0,
+        change_percentage: 0,
+        link: '',
+        summary: true,
+        products: result.rows.map(row => ({
+          title: row.title,
+          current_price: row.current_price,
+          previous_price: row.previous_price || row.current_price,
+          change_percentage: row.previous_price ? 
+            ((row.current_price - row.previous_price) / row.previous_price * 100) : 0,
+          link: row.link,
+          category_name: row.category_name
+        }))
+      };
+      
+      notificationService.bufferNotification(summary);
+      console.log('✅ Genel özet bildirimi buffer\'a eklendi');
+    } else {
+      console.log('⚠️ Genel özet için veri bulunamadı');
     }
-    console.log(stdout);
-    if (stderr) console.error(stderr);
-  });
+  } catch (e) {
+    console.error('❌ Genel özet bildirimi eklenirken hata:', e.message);
+  }
 }
 
 // 🔄 Sürekli tarama fonksiyonu

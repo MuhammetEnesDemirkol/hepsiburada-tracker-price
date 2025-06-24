@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const db = require('./db');
 
-// ✅ GET /categories – Tüm kategorileri getir
+// ✅ GET /categories → Tüm kategorileri döner
 router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM categories ORDER BY id');
     res.json(result.rows);
   } catch (err) {
-    console.error('❌ GET /categories hatası:', err.message);
+    console.error('❌ GET /categories:', err.message);
     res.status(500).json({ error: 'Veritabanı hatası' });
   }
 });
