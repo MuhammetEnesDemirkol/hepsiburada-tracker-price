@@ -27,10 +27,19 @@ class PriceComparisonService {
         }
 
         const change = newPriceNum - oldPriceNum;
-        const changePercentage = (Math.abs(change) / oldPriceNum) * 100;
+        
+        // Fiyat değişim tipini belirle
         const changeType = change > 0 ? this.PRICE_CHANGE_TYPES.INCREASE : 
                           change < 0 ? this.PRICE_CHANGE_TYPES.DECREASE : 
                           this.PRICE_CHANGE_TYPES.NO_CHANGE;
+
+        // Düşen fiyatlar için doğru oran hesaplama: ((Eski Fiyat - Yeni Fiyat) / Eski Fiyat) * 100
+        let changePercentage = 0;
+        if (changeType === this.PRICE_CHANGE_TYPES.DECREASE) {
+            changePercentage = ((oldPriceNum - newPriceNum) / oldPriceNum) * 100;
+        } else if (changeType === this.PRICE_CHANGE_TYPES.INCREASE) {
+            changePercentage = ((newPriceNum - oldPriceNum) / oldPriceNum) * 100;
+        }
 
         return {
             change,
@@ -46,6 +55,7 @@ class PriceComparisonService {
 
         // Sadece fiyat düşüşlerini bildir
         if (change.changeType !== this.PRICE_CHANGE_TYPES.DECREASE) {
+            logger.info('Fiyat artışı tespit edildi, bildirim gönderilmiyor');
             return false;
         }
 
@@ -139,12 +149,18 @@ class PriceComparisonService {
                 return null;
             }
 
+            const priceChangeResult = this.calculatePriceChange(previousPrice, product.price);
+            
+            if (!priceChangeResult) {
+                return null;
+            }
+
             const priceChange = {
                 product_code: product.product_code,
                 title: product.title,
                 previous_price: previousPrice,
                 current_price: product.price,
-                change_percentage: this.calculatePriceChange(previousPrice, product.price)
+                change_percentage: priceChangeResult
             };
 
             return priceChange;
@@ -168,17 +184,20 @@ Link: ${product.link}
                 });
             }
 
-            // Fiyat değişikliği bildirimleri
+            // Sadece fiyat düşüşü bildirimleri
             for (const change of results.priceChanges) {
-                await notificationService.sendInstantNotification({
-                    title: '💸 Fiyat Değişimi',
-                    message: `
+                // Fiyat değişikliği tipini kontrol et
+                if (change.change_percentage && change.change_percentage.changeType === 'decrease') {
+                    await notificationService.sendInstantNotification({
+                        title: '💸 Fiyat Düşüşü',
+                        message: `
 Ürün: ${change.title}
 Eski Fiyat: ${change.previous_price} TL
 Yeni Fiyat: ${change.current_price} TL
-Değişim: %${(parseFloat(change.change_percentage) || 0).toFixed(1)}
+İndirim Oranı: %${(parseFloat(change.change_percentage.changePercentage) || 0).toFixed(1)}
                     `.trim()
-                });
+                    });
+                }
             }
         } catch (error) {
             logger.error(`Bildirim gönderme hatası: ${error.message}`);
@@ -200,13 +219,23 @@ Değişim: %${(parseFloat(change.change_percentage) || 0).toFixed(1)}
         }
 
         const change = current - previous;
-        const changePercentage = (change / previous) * 100;
+        
+        // Düşen fiyatlar için doğru oran hesaplama: ((Eski Fiyat - Yeni Fiyat) / Eski Fiyat) * 100
+        let changePercentage = 0;
+        if (change < 0) {
+            // Fiyat düştü
+            changePercentage = ((previous - current) / previous) * 100;
+        } else if (change > 0) {
+            // Fiyat arttı
+            changePercentage = ((current - previous) / previous) * 100;
+        }
 
         return {
             current_price: current,
             previous_price: previous,
             change_amount: change,
-            change_percentage: parseFloat(changePercentage.toFixed(2))
+            change_percentage: parseFloat(changePercentage.toFixed(2)),
+            changeType: change > 0 ? 'increase' : change < 0 ? 'decrease' : 'no_change'
         };
     }
 

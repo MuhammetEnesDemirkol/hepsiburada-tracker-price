@@ -126,7 +126,8 @@ function parsePrice(priceString) {
     return null;
   }
   
-  return numericPrice;
+  // Kuruşları at (her zaman tam sayı)
+  return Math.floor(numericPrice);
 }
 
 // Ürünleri veritabanına kaydet
@@ -528,7 +529,7 @@ async function scrapeCategory(category, browser) {
           
           // Sadece fiyat düşüşlerini kontrol et
           if (newPrice < oldPrice) {
-            // Kategori için eşik değerini kontrol et
+            // Kategori için eşik değerini kontrol et - doğru oran hesaplama: ((Eski Fiyat - Yeni Fiyat) / Eski Fiyat) * 100
             const priceChange = ((oldPrice - newPrice) / oldPrice) * 100;
             if (priceChange >= category.discount_threshold) { // Kategori bazlı eşik değeri
               priceChanges++;

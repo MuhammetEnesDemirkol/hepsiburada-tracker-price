@@ -123,7 +123,8 @@ function parsePrice(priceString) {
     return null;
   }
   
-  return numericPrice;
+  // Kuruşları at (her zaman tam sayı)
+  return Math.floor(numericPrice);
 }
 
 // Ürünleri veritabanına kaydet

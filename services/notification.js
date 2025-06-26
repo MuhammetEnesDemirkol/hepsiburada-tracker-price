@@ -24,6 +24,12 @@ class NotificationService {
                 return false;
             }
 
+            // Sadece fiyat düşüşleri için bildirim gönder
+            if (newPrice >= oldPrice) {
+                logger.info('Fiyat artışı tespit edildi, bildirim gönderilmiyor');
+                return false;
+            }
+
             const message = 
                 `💸 *Fiyatı Güncellenen Ürün*\n\n` +
                 `📝 **${newProduct.title}**\n` +
@@ -137,7 +143,8 @@ class NotificationService {
             cleanPrice = cleanPrice.replace(/\./g, '');
         }
         const numericPrice = parseFloat(cleanPrice);
-        return isNaN(numericPrice) ? null : numericPrice;
+        // Kuruşları at (her zaman tam sayı)
+        return isNaN(numericPrice) ? null : Math.floor(numericPrice);
     }
 
     delay(ms) {
