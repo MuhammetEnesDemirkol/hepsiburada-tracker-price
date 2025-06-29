@@ -530,8 +530,7 @@ async function scrapeCategory(category, browser) {
               // Merkezi bildirim sistemini kullan
               await notificationService.sendPriceChangeNotification({
                 old: change.old,
-                new: change.new,
-                changePercentage: change.changePercentage
+                new: change.new
               });
 
               const formatted =

@@ -30,13 +30,16 @@ class NotificationService {
                 return false;
             }
 
+            // Doğru indirim oranını hesapla: ((Eski Fiyat - Yeni Fiyat) / Eski Fiyat) * 100
+            const correctDiscountPercentage = ((oldPrice - newPrice) / oldPrice * 100).toFixed(2);
+
             const message = 
                 `💸 *Fiyatı Güncellenen Ürün*\n\n` +
                 `📝 **${newProduct.title}**\n` +
                 `📦 Ürün Kodu: \`${newProduct.product_code}\`\n` +
                 `📈 Eski Fiyat: ${oldPrice.toLocaleString('tr-TR')} TL\n` +
                 `📊 Yeni Fiyat: ${newPrice.toLocaleString('tr-TR')} TL\n` +
-                `📉 İndirim Oranı: %${changePercentage}\n\n` +
+                `📉 İndirim Oranı: %${correctDiscountPercentage}\n\n` +
                 `🔗 [Ürünü Görüntüle](${newProduct.link})`;
 
             return await this.sendMessage(message);
